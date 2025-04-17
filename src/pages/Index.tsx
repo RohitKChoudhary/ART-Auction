@@ -14,7 +14,7 @@ const Index = () => {
     <div className="min-h-screen flex items-center justify-center bg-art-dark">
       <div className="text-center">
         <h1 className="text-4xl font-bold art-gradient-text mb-4">ART AUCTION</h1>
-        <p className="text-xl text-gray-600">Redirecting to homepage...</p>
+        <p className="text-xl text-gray-400">Redirecting to homepage...</p>
       </div>
     </div>
   );

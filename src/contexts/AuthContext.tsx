@@ -105,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Login Failed",
         description: "Invalid credentials. Please try again.",
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -115,20 +116,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authAPI.register(name, email, password);
       
+      toast({
+        title: "Registration Successful",
+        description: "Welcome to ART Auction! Please log in with your credentials.",
+      });
+      
       // After registration, log in the user
       await login(email, password);
       
-      toast({
-        title: "Registration Successful",
-        description: "Welcome to ART Auction!",
-      });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+      const errorMessage = error.response?.data || "An error occurred during registration.";
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: "An error occurred during registration.",
+        description: errorMessage,
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Password Reset Failed",
         description: "An error occurred. Please try again.",
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }

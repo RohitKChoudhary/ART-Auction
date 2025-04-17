@@ -14,51 +14,51 @@ class WebSocketService {
       this.disconnect();
     }
 
-    this.client = new Client({
-      webSocketFactory: () => new SockJS(SOCKET_URL),
-      debug: (str) => {
-        console.debug(str);
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      onConnect: () => {
-        console.log("WebSocket connected successfully");
-        
-        // Resubscribe to topics after reconnect
-        Object.keys(this.subscriptions).forEach(topic => {
-          this.subscriptions[topic].forEach(sub => {
-            this.subscribe(topic, sub.callback);
-          });
-        });
-
-        if (userId) {
-          // Subscribe to user-specific topics
-          this.subscribe(`/user/${userId}/queue/notifications`, (message) => {
-            console.log("Received notification:", message);
-            // Handle notification in the application
-          });
-
-          this.subscribe(`/user/${userId}/queue/messages`, (message) => {
-            console.log("Received message:", message);
-            // Handle message in the application
-          });
-        }
-
-        if (onConnect) {
-          onConnect();
-        }
-      },
-      onStompError: (frame) => {
-        console.error('STOMP error', frame);
-      },
-      onWebSocketClose: () => {
-        console.log('WebSocket connection closed');
-        this.scheduleReconnect();
-      }
-    });
-
     try {
+      this.client = new Client({
+        webSocketFactory: () => new SockJS(SOCKET_URL),
+        debug: (str) => {
+          console.debug(str);
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+        onConnect: () => {
+          console.log("WebSocket connected successfully");
+          
+          // Resubscribe to topics after reconnect
+          Object.keys(this.subscriptions).forEach(topic => {
+            this.subscriptions[topic].forEach(sub => {
+              this.subscribe(topic, sub.callback);
+            });
+          });
+
+          if (userId) {
+            // Subscribe to user-specific topics
+            this.subscribe(`/user/${userId}/queue/notifications`, (message) => {
+              console.log("Received notification:", message);
+              // Handle notification in the application
+            });
+
+            this.subscribe(`/user/${userId}/queue/messages`, (message) => {
+              console.log("Received message:", message);
+              // Handle message in the application
+            });
+          }
+
+          if (onConnect) {
+            onConnect();
+          }
+        },
+        onStompError: (frame) => {
+          console.error('STOMP error', frame);
+        },
+        onWebSocketClose: () => {
+          console.log('WebSocket connection closed');
+          this.scheduleReconnect();
+        }
+      });
+
       console.log("Attempting to connect to WebSocket...");
       this.client.activate();
     } catch (error) {

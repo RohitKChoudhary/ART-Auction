@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Signup: React.FC = () => {
   const [name, setName] = useState("");
@@ -20,6 +21,7 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [signupError, setSignupError] = useState("");
   const { register, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -28,8 +30,8 @@ const Signup: React.FC = () => {
       setPasswordError("Passwords do not match");
       return false;
     }
-    if (password.length < 8) {
-      setPasswordError("Password must be at least 8 characters long");
+    if (password.length < 6) {
+      setPasswordError("Password must be at least 6 characters long");
       return false;
     }
     setPasswordError("");
@@ -38,12 +40,22 @@ const Signup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !confirmPassword) return;
+    setSignupError("");
+    
+    if (!name || !email || !password || !confirmPassword) {
+      setSignupError("All fields are required");
+      return;
+    }
     
     if (!validatePassword()) return;
     
-    await register(name, email, password);
-    navigate("/dashboard");
+    try {
+      await register(name, email, password);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Signup error:", error);
+      setSignupError("Failed to create account. The email may already be in use.");
+    }
   };
 
   return (
@@ -59,6 +71,11 @@ const Signup: React.FC = () => {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {signupError && (
+              <Alert variant="destructive">
+                <AlertDescription>{signupError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -93,6 +110,7 @@ const Signup: React.FC = () => {
                 className="art-input"
                 required
               />
+              <p className="text-xs text-gray-400">Password must be at least 6 characters long</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>

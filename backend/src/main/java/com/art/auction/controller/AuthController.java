@@ -41,65 +41,86 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody AuthRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
-        
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+            
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        return ResponseEntity.ok(new JwtResponse(
-                jwt,
-                userDetails.getId(),
-                userDetails.getName(),
-                userDetails.getEmail(),
-                new HashSet<>(userDetails.getAuthorities().stream()
-                        .map(item -> User.Role.valueOf(item.getAuthority()))
-                        .toList())
-        ));
+            return ResponseEntity.ok(new JwtResponse(
+                    jwt,
+                    userDetails.getId(),
+                    userDetails.getName(),
+                    userDetails.getEmail(),
+                    new HashSet<>(userDetails.getAuthorities().stream()
+                            .map(item -> User.Role.valueOf(item.getAuthority()))
+                            .toList())
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Invalid credentials");
+        }
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity.badRequest().body("Error: Email is already in use!");
+        try {
+            if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+                return ResponseEntity.badRequest().body("Error: Email is already in use!");
+            }
+
+            // Validate inputs
+            if (signUpRequest.getName() == null || signUpRequest.getName().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Error: Name is required.");
+            }
+            
+            if (signUpRequest.getPassword() == null || signUpRequest.getPassword().length() < 6) {
+                return ResponseEntity.badRequest().body("Error: Password must be at least 6 characters.");
+            }
+
+            // Create new user's account
+            User user = new User();
+            user.setName(signUpRequest.getName());
+            user.setEmail(signUpRequest.getEmail());
+            user.setPassword(encoder.encode(signUpRequest.getPassword()));
+
+            Set<User.Role> roles = new HashSet<>();
+            // Default role is USER
+            roles.add(User.Role.ROLE_USER);
+            
+            // For admin credentials
+            if (signUpRequest.getEmail().equals("art123bets@gmail.com") && 
+                signUpRequest.getPassword().equals("ARTROCKS123")) {
+                roles.add(User.Role.ROLE_ADMIN);
+            }
+            
+            user.setRoles(roles);
+            user.setActive(true);
+            user.setCreatedAt(LocalDateTime.now().toString());
+            user.setUpdatedAt(LocalDateTime.now().toString());
+            
+            userRepository.save(user);
+
+            return ResponseEntity.ok("User registered successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: Registration failed. " + e.getMessage());
         }
-
-        // Create new user's account
-        User user = new User();
-        user.setName(signUpRequest.getName());
-        user.setEmail(signUpRequest.getEmail());
-        user.setPassword(encoder.encode(signUpRequest.getPassword()));
-
-        Set<User.Role> roles = new HashSet<>();
-        // Default role is USER
-        roles.add(User.Role.ROLE_USER);
-        
-        // For admin credentials
-        if (signUpRequest.getEmail().equals("art123bets@gmail.com") && 
-            signUpRequest.getPassword().equals("ARTROCKS123")) {
-            roles.add(User.Role.ROLE_ADMIN);
-        }
-        
-        user.setRoles(roles);
-        user.setActive(true);
-        user.setCreatedAt(LocalDateTime.now().toString());
-        user.setUpdatedAt(LocalDateTime.now().toString());
-        
-        userRepository.save(user);
-
-        return ResponseEntity.ok("User registered successfully!");
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestParam String email) {
-        // In a real app, this would send an email with a reset link
-        // For now, we'll just check if the user exists
-        if (!userRepository.existsByEmail(email)) {
-            return ResponseEntity.badRequest().body("Error: Email not found!");
-        }
+        try {
+            // In a real app, this would send an email with a reset link
+            // For now, we'll just check if the user exists
+            if (!userRepository.existsByEmail(email)) {
+                return ResponseEntity.badRequest().body("Error: Email not found!");
+            }
 
-        return ResponseEntity.ok("Password reset instructions sent to your email.");
+            return ResponseEntity.ok("Password reset instructions sent to your email.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: Password reset failed. " + e.getMessage());
+        }
     }
 }

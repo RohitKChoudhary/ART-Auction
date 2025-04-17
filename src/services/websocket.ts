@@ -1,8 +1,7 @@
-
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-const SOCKET_URL = "http://localhost:8080/api/ws";
+const SOCKET_URL = "http://localhost:8080/ws";
 
 class WebSocketService {
   private client: Client | null = null;
@@ -23,7 +22,7 @@ class WebSocketService {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        console.log("WebSocket connected");
+        console.log("WebSocket connected successfully");
         
         // Resubscribe to topics after reconnect
         Object.keys(this.subscriptions).forEach(topic => {
@@ -58,7 +57,12 @@ class WebSocketService {
       }
     });
 
-    this.client.activate();
+    try {
+      console.log("Attempting to connect to WebSocket...");
+      this.client.activate();
+    } catch (error) {
+      console.error("Error connecting to WebSocket:", error);
+    }
   }
 
   disconnect(): void {
@@ -130,6 +134,10 @@ class WebSocketService {
       destination,
       body: JSON.stringify(body)
     });
+  }
+
+  isConnected(): boolean {
+    return !!this.client && !!this.client.connected;
   }
 }
 

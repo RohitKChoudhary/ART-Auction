@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { authAPI } from "@/services/api";
@@ -77,12 +78,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authAPI.login(email, password);
       const userData = response.data;
       
-      // Transform to match our User interface
-      const userObj = {
+      // Transform to match our User interface with correct typing
+      const userObj: User = {
         id: userData.id,
         name: userData.name,
         email: userData.email,
-        role: userData.roles.includes("ROLE_ADMIN") ? "admin" : "user" as const
+        role: userData.roles.includes("ROLE_ADMIN") ? "admin" as const : "user" as const
       };
 
       setUser(userObj);

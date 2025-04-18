@@ -98,12 +98,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Welcome back to ART Auction!",
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
+      const errorMessage = error.response?.data || "Invalid credentials. Please try again.";
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: errorMessage,
       });
       throw error;
     } finally {
@@ -114,15 +115,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      await authAPI.register(name, email, password);
+      const response = await authAPI.register(name, email, password);
+      const userData = response.data;
+      
+      // If the backend returns user data directly after registration
+      if (userData && userData.token) {
+        // Transform to match our User interface
+        const userObj: User = {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.roles?.includes("ROLE_ADMIN") ? "admin" as const : "user" as const
+        };
+
+        setUser(userObj);
+        localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
+        localStorage.setItem("artAuctionToken", userData.token);
+        
+        // Connect to WebSocket with user ID
+        websocket.connect(userObj.id);
+
+        toast({
+          title: "Registration Successful",
+          description: "Welcome to ART Auction!",
+        });
+        return;
+      }
       
       toast({
         title: "Registration Successful",
-        description: "Welcome to ART Auction! Please log in with your credentials.",
+        description: "Please log in with your new credentials.",
       });
-      
-      // After registration, log in the user
-      await login(email, password);
       
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -161,12 +184,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Password Reset Email Sent",
         description: "Check your inbox for password reset instructions.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Password reset error:", error);
+      const errorMessage = error.response?.data || "An error occurred. Please try again.";
       toast({
         variant: "destructive",
         title: "Password Reset Failed",
-        description: "An error occurred. Please try again.",
+        description: errorMessage,
       });
       throw error;
     } finally {

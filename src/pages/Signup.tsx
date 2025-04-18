@@ -52,9 +52,9 @@ const Signup: React.FC = () => {
     try {
       await register(name, email, password);
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
-      setSignupError("Failed to create account. The email may already be in use.");
+      setSignupError(error.response?.data || "Failed to create account. The email may already be in use.");
     }
   };
 

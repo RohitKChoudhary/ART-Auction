@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,7 +23,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -59,8 +59,10 @@ public class AuthController {
                             .map(item -> User.Role.valueOf(item.getAuthority()))
                             .toList())
             ));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(401).body("Invalid credentials: Email or password is incorrect");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Invalid credentials");
+            return ResponseEntity.status(500).body("Authentication error: " + e.getMessage());
         }
     }
 
@@ -91,8 +93,7 @@ public class AuthController {
             roles.add(User.Role.ROLE_USER);
             
             // For admin credentials
-            if (signUpRequest.getEmail().equals("art123bets@gmail.com") && 
-                signUpRequest.getPassword().equals("ARTROCKS123")) {
+            if ("art123bets@gmail.com".equals(signUpRequest.getEmail())) {
                 roles.add(User.Role.ROLE_ADMIN);
             }
             
@@ -103,7 +104,24 @@ public class AuthController {
             
             userRepository.save(user);
 
-            return ResponseEntity.ok("User registered successfully!");
+            // After successful registration, auto-login the user
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(signUpRequest.getEmail(), signUpRequest.getPassword()));
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+            
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+            return ResponseEntity.ok(new JwtResponse(
+                    jwt,
+                    userDetails.getId(),
+                    userDetails.getName(),
+                    userDetails.getEmail(),
+                    userDetails.getAuthorities().stream()
+                            .map(item -> User.Role.valueOf(item.getAuthority()))
+                            .collect(java.util.stream.Collectors.toSet())
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: Registration failed. " + e.getMessage());
         }

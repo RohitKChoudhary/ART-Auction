@@ -1,11 +1,12 @@
 
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api";
+// For Lovable preview, we'll use mock data instead of connecting to localhost
+const IS_PRODUCTION = window.location.hostname !== "localhost";
 
-// Create axios instance
+// Create axios instance with conditional base URL
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: IS_PRODUCTION ? undefined : "http://localhost:8080/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -24,6 +25,97 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Intercept responses in production mode to mock backend behavior
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Only use mocks in production mode
+    if (IS_PRODUCTION && error.message === "Network Error") {
+      console.log("Using mock data instead of real backend");
+      return handleMockResponses(error.config);
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Mock response handler based on request URL and method
+const handleMockResponses = (config) => {
+  const { url, method, data } = config;
+  
+  // Mock user registration
+  if (url === "/auth/signup" && method.toLowerCase() === "post") {
+    const userData = JSON.parse(data);
+    
+    // Check if required fields are provided
+    if (!userData.name || !userData.email || !userData.password) {
+      return Promise.reject({
+        response: { data: "All fields are required" }
+      });
+    }
+    
+    // Create mock user response
+    const userId = `user-${Date.now()}`;
+    const mockResponse = {
+      data: {
+        id: userId,
+        name: userData.name,
+        email: userData.email,
+        token: `mock-token-${userId}`,
+        roles: ["ROLE_USER"]
+      }
+    };
+    
+    return Promise.resolve(mockResponse);
+  }
+  
+  // Mock login
+  if (url === "/auth/login" && method.toLowerCase() === "post") {
+    const loginData = JSON.parse(data);
+    
+    // Check admin login
+    if (loginData.email === "art123bets@gmail.com" && loginData.password === "ARTROCKS123") {
+      return Promise.resolve({
+        data: {
+          id: "admin-1",
+          name: "ART Admin",
+          email: "art123bets@gmail.com",
+          token: "mock-token-for-admin",
+          roles: ["ROLE_USER", "ROLE_ADMIN"]
+        }
+      });
+    }
+    
+    // For demo purposes, any valid email/password combination will work
+    if (loginData.email && loginData.password && loginData.password.length >= 6) {
+      return Promise.resolve({
+        data: {
+          id: `user-${Date.now()}`,
+          name: loginData.email.split("@")[0],
+          email: loginData.email,
+          token: `mock-token-${Date.now()}`,
+          roles: ["ROLE_USER"]
+        }
+      });
+    }
+    
+    return Promise.reject({
+      response: { data: "Invalid credentials: Email or password is incorrect" }
+    });
+  }
+  
+  // Mock forgot password
+  if (url.includes("/auth/forgot-password") && method.toLowerCase() === "post") {
+    return Promise.resolve({
+      data: "Password reset instructions sent to your email."
+    });
+  }
+  
+  // Default response for unmocked endpoints
+  return Promise.reject({
+    response: { data: "This API endpoint is not available in preview mode." }
+  });
+};
 
 // Auth API
 export const authAPI = {

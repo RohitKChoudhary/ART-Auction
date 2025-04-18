@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
 
 const Signup: React.FC = () => {
   const [name, setName] = useState("");
@@ -24,6 +25,7 @@ const Signup: React.FC = () => {
   const [signupError, setSignupError] = useState("");
   const { register, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const validatePassword = () => {
     if (password !== confirmPassword) {
@@ -51,10 +53,18 @@ const Signup: React.FC = () => {
     
     try {
       await register(name, email, password);
+      toast({
+        title: "Account created successfully!",
+        description: "Redirecting to dashboard...",
+      });
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Signup error:", error);
-      setSignupError(error.response?.data || "Failed to create account. The email may already be in use.");
+      setSignupError(
+        error.response?.data || 
+        error.message || 
+        "Failed to create account. Please try again later."
+      );
     }
   };
 

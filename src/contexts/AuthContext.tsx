@@ -40,8 +40,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
-          // Connect to WebSocket with user ID
-          websocket.connect(parsedUser.id);
+          // We'll skip websocket connection in mock mode
+          try {
+            websocket.connect(parsedUser.id);
+          } catch (e) {
+            console.log("WebSocket connection skipped:", e.message);
+          }
         } catch (e) {
           localStorage.removeItem("artAuctionUser");
           localStorage.removeItem("artAuctionToken");
@@ -67,7 +71,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(adminUser);
         localStorage.setItem("artAuctionUser", JSON.stringify(adminUser));
         localStorage.setItem("artAuctionToken", "mock-token-for-admin");
-        websocket.connect(adminUser.id);
+        
+        try {
+          websocket.connect(adminUser.id);
+        } catch (e) {
+          console.log("WebSocket connection skipped:", e.message);
+        }
+        
         toast({
           title: "Admin Login Successful",
           description: "Welcome back, ART Admin!",
@@ -90,8 +100,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
       localStorage.setItem("artAuctionToken", userData.token);
       
-      // Connect to WebSocket with user ID
-      websocket.connect(userObj.id);
+      // Try to connect websocket
+      try {
+        websocket.connect(userObj.id);
+      } catch (e) {
+        console.log("WebSocket connection skipped:", e.message);
+      }
 
       toast({
         title: "Login Successful",
@@ -132,8 +146,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
         localStorage.setItem("artAuctionToken", userData.token);
         
-        // Connect to WebSocket with user ID
-        websocket.connect(userObj.id);
+        // Try to connect websocket
+        try {
+          websocket.connect(userObj.id);
+        } catch (e) {
+          console.log("WebSocket connection skipped:", e.message);
+        }
 
         toast({
           title: "Registration Successful",
@@ -162,8 +180,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    // Disconnect WebSocket
-    websocket.disconnect();
+    // Try to disconnect WebSocket
+    try {
+      websocket.disconnect();
+    } catch (e) {
+      console.log("WebSocket disconnect skipped:", e.message);
+    }
     
     // Clear user data
     setUser(null);

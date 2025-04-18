@@ -47,8 +47,8 @@ const Landing: React.FC = () => {
               Welcome to <span className="art-gradient-text">ART</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-300 mb-8">
-              A sleek and secure platform where collectors and creators connect in real-time. 
-              Join our community today.
+              A versatile digital platform connecting creators and collectors across multiple domains. 
+              Discover, collaborate, and grow together.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link to="/signup">
@@ -68,13 +68,12 @@ const Landing: React.FC = () => {
         <div className="absolute bottom-0 w-full h-16 bg-gradient-to-t from-art-dark to-transparent"></div>
       </header>
       
-      {/* How It Works Section */}
       <section id="how-it-works" className="py-20 bg-art-dark-blue">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How ART Works</h2>
             <p className="text-gray-300 max-w-2xl mx-auto">
-              Our platform offers a seamless experience for art enthusiasts to connect and collaborate.
+              Our platform offers a seamless experience for creators and collectors to connect, collaborate, and grow.
             </p>
           </div>
           
@@ -112,7 +111,6 @@ const Landing: React.FC = () => {
         </div>
       </section>
       
-      {/* Features Section */}
       <section id="features" className="py-20 bg-art-dark">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
@@ -158,7 +156,6 @@ const Landing: React.FC = () => {
         </div>
       </section>
       
-      {/* CTA Section */}
       <section className="py-20 bg-gradient-to-br from-art-purple/30 to-art-teal/30">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Join?</h2>
@@ -173,7 +170,6 @@ const Landing: React.FC = () => {
         </div>
       </section>
       
-      {/* Footer */}
       <footer className="bg-art-dark-blue py-12">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center">

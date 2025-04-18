@@ -88,12 +88,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authAPI.login(email, password);
       const userData = response.data;
       
-      // Transform to match our User interface with correct typing
+      // Check if userData and roles exist before accessing them
+      if (!userData) {
+        throw new Error("Invalid response from server");
+      }
+
+      // Transform to match our User interface with correct typing and safe access
       const userObj: User = {
         id: userData.id,
         name: userData.name,
         email: userData.email,
-        role: userData.roles.includes("ROLE_ADMIN") ? "admin" as const : "user" as const
+        role: Array.isArray(userData.roles) && userData.roles.includes("ROLE_ADMIN") ? 
+              "admin" as const : "user" as const
       };
 
       setUser(userObj);
@@ -139,7 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: userData.id,
           name: userData.name,
           email: userData.email,
-          role: userData.roles?.includes("ROLE_ADMIN") ? "admin" as const : "user" as const
+          role: Array.isArray(userData.roles) && userData.roles.includes("ROLE_ADMIN") ? 
+                "admin" as const : "user" as const
         };
 
         setUser(userObj);

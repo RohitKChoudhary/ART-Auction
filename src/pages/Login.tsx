@@ -31,8 +31,8 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-art-dark p-4">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold art-gradient-text mb-2">ART AUCTION</h1>
-        <p className="text-gray-400">Sign in to access your auction dashboard</p>
+        <h1 className="text-4xl font-bold art-gradient-text mb-2">ART</h1>
+        <p className="text-gray-400">Sign in to access your dashboard</p>
       </div>
 
       <Card className="w-full max-w-md bg-art-dark-blue border-art-purple/30">
@@ -97,7 +97,7 @@ const Login: React.FC = () => {
       </Card>
 
       <div className="mt-12 text-gray-400 text-xs text-center">
-        <p>© 2025 ART Auction. All rights reserved.</p>
+        <p>© 2025 ART. All rights reserved.</p>
       </div>
     </div>
   );

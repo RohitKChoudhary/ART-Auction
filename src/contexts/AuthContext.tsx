@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { authAPI } from "@/services/api";
@@ -30,7 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check for stored token on mount
   useEffect(() => {
     const checkAuth = () => {
       const storedUser = localStorage.getItem("artAuctionUser");
@@ -40,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
-          // We'll skip websocket connection in mock mode
           try {
             websocket.connect(parsedUser.id);
           } catch (e) {
@@ -60,40 +57,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // For demo purposes, let's keep the mock admin login
-      if (email === "art123bets@gmail.com" && password === "ARTROCKS123") {
-        const adminUser = {
-          id: "admin-1",
-          name: "ART",
-          email: "art123bets@gmail.com",
-          role: "admin" as const
-        };
-        setUser(adminUser);
-        localStorage.setItem("artAuctionUser", JSON.stringify(adminUser));
-        localStorage.setItem("artAuctionToken", "mock-token-for-admin");
-        
-        try {
-          websocket.connect(adminUser.id);
-        } catch (e) {
-          console.log("WebSocket connection skipped:", e.message);
-        }
-        
-        toast({
-          title: "Admin Login Successful",
-          description: "Welcome back, ART Admin!",
-        });
-        return;
-      }
-
       const response = await authAPI.login(email, password);
       const userData = response.data;
       
-      // Check if userData and roles exist before accessing them
       if (!userData) {
         throw new Error("Invalid response from server");
       }
 
-      // Transform to match our User interface with correct typing and safe access
       const userObj: User = {
         id: userData.id,
         name: userData.name,
@@ -106,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
       localStorage.setItem("artAuctionToken", userData.token);
       
-      // Try to connect websocket
       try {
         websocket.connect(userObj.id);
       } catch (e) {
@@ -115,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast({
         title: "Login Successful",
-        description: "Welcome back to ART Auction!",
+        description: "Welcome to ART!",
       });
 
     } catch (error: any) {
@@ -138,9 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authAPI.register(name, email, password);
       const userData = response.data;
       
-      // If the backend returns user data directly after registration
       if (userData && userData.token) {
-        // Transform to match our User interface
         const userObj: User = {
           id: userData.id,
           name: userData.name,
@@ -153,7 +120,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
         localStorage.setItem("artAuctionToken", userData.token);
         
-        // Try to connect websocket
         try {
           websocket.connect(userObj.id);
         } catch (e) {
@@ -162,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         toast({
           title: "Registration Successful",
-          description: "Welcome to ART Auction!",
+          description: "Welcome to ART!",
         });
         return;
       }
@@ -187,14 +153,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    // Try to disconnect WebSocket
     try {
       websocket.disconnect();
     } catch (e) {
       console.log("WebSocket disconnect skipped:", e.message);
     }
     
-    // Clear user data
     setUser(null);
     localStorage.removeItem("artAuctionUser");
     localStorage.removeItem("artAuctionToken");

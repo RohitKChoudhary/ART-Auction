@@ -31,7 +31,7 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-art-dark p-4">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold art-gradient-text mb-2">ART</h1>
+        <h1 className="text-4xl font-bold art-gradient-text mb-2">ART Auction</h1>
         <p className="text-gray-400">Sign in to access your dashboard</p>
       </div>
 

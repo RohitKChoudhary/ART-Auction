@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Card, 
   CardContent, 
@@ -12,96 +12,67 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronUp, Clock } from "lucide-react";
-
-// Mock auction data
-const mockAuctions = [
-  {
-    id: "a1",
-    title: "Moonlit Reflections",
-    artist: "Elena Rivera",
-    description: "An ethereal abstract painting depicting the dance of moonlight on water.",
-    currentBid: 2450,
-    minBidIncrement: 100,
-    endTime: new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString(), // 23 hours from now
-    image: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80",
-    category: "abstract",
-  },
-  {
-    id: "a2",
-    title: "Urban Perspective",
-    artist: "Marcus Chen",
-    description: "A striking cityscape rendered in bold colors and sharp lines.",
-    currentBid: 1800,
-    minBidIncrement: 50,
-    endTime: new Date(Date.now() + 28 * 60 * 60 * 1000).toISOString(), // 28 hours from now
-    image: "https://images.unsplash.com/photo-1601379329542-33e01a2e2b41?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80",
-    category: "urban",
-  },
-  {
-    id: "a3",
-    title: "Serene Nature",
-    artist: "Sophia Lee",
-    description: "A peaceful landscape showcasing the beauty of untouched wilderness.",
-    currentBid: 3200,
-    minBidIncrement: 150,
-    endTime: new Date(Date.now() + 42 * 60 * 60 * 1000).toISOString(), // 42 hours from now
-    image: "https://images.unsplash.com/photo-1500965178224-43c70b159434?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80",
-    category: "landscape",
-  },
-  {
-    id: "a4",
-    title: "Emotional Portrait",
-    artist: "James Wilson",
-    description: "A powerful portrait that captures raw human emotion.",
-    currentBid: 1950,
-    minBidIncrement: 75,
-    endTime: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(), // 12 hours from now
-    image: "https://images.unsplash.com/photo-1578926375605-eaf7559b1458?ixlib=rb-4.0.3&auto=format&fit=crop&w=987&q=80",
-    category: "portrait",
-  },
-  {
-    id: "a5",
-    title: "Digital Dreams",
-    artist: "Nora Patel",
-    description: "An AI-assisted digital artwork exploring the boundary between reality and imagination.",
-    currentBid: 1100,
-    minBidIncrement: 50,
-    endTime: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(), // 36 hours from now
-    image: "https://images.unsplash.com/photo-1549490349-8643362247b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=987&q=80",
-    category: "digital",
-  },
-  {
-    id: "a6",
-    title: "Geometric Harmony",
-    artist: "David Müller",
-    description: "A precise arrangement of geometric shapes creating a harmonious composition.",
-    currentBid: 2800,
-    minBidIncrement: 100,
-    endTime: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(), // 18 hours from now
-    image: "https://images.unsplash.com/photo-1611538758730-e5ce8aa790ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80",
-    category: "geometric",
-  },
-];
+import { ChevronUp, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { auctionsAPI, bidsAPI } from "@/services/api";
 
 const Buyer: React.FC = () => {
   const { toast } = useToast();
-  const [auctions, setAuctions] = useState(mockAuctions);
+  const queryClient = useQueryClient();
   const [bidAmounts, setBidAmounts] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch active auctions
+  const { data: auctions, isLoading } = useQuery({
+    queryKey: ["active-auctions"],
+    queryFn: async () => {
+      try {
+        const response = await auctionsAPI.getAll();
+        return response.data || [];
+      } catch (error) {
+        console.error("Error fetching auctions:", error);
+        return [];
+      }
+    }
+  });
+
+  // Bid mutation
+  const bidMutation = useMutation({
+    mutationFn: async ({ auctionId, amount }: { auctionId: string, amount: number }) => {
+      return await bidsAPI.placeBid(auctionId, amount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
+    },
+    onError: (error) => {
+      console.error("Bid error:", error);
+      toast({
+        variant: "destructive",
+        title: "Bid Failed",
+        description: "There was an error placing your bid. Please try again."
+      });
+    }
+  });
+
   // Calculate time remaining
   const getTimeRemaining = (endTime: string) => {
-    const total = Date.parse(endTime) - Date.now();
-    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-    const days = Math.floor(total / (1000 * 60 * 60 * 24));
-    const minutes = Math.floor((total / 1000 / 60) % 60);
-    
-    if (days > 0) {
-      return `${days}d ${hours}h`;
+    try {
+      const total = Date.parse(endTime) - Date.now();
+      if (total <= 0) return "Ended";
+      
+      const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+      const days = Math.floor(total / (1000 * 60 * 60 * 24));
+      const minutes = Math.floor((total / 1000 / 60) % 60);
+      
+      if (days > 0) {
+        return `${days}d ${hours}h`;
+      }
+      return `${hours}h ${minutes}m`;
+    } catch (error) {
+      return "Invalid date";
     }
-    return `${hours}h ${minutes}m`;
   };
 
   const handleBidChange = (id: string, value: string) => {
@@ -111,26 +82,24 @@ const Buyer: React.FC = () => {
     }
   };
 
-  const handleBidSubmit = (auction: typeof mockAuctions[0]) => {
+  const handleBidSubmit = (auction: any) => {
     const bidAmount = bidAmounts[auction.id] || 0;
     
     if (bidAmount <= auction.currentBid) {
       toast({
         variant: "destructive",
         title: "Bid too low",
-        description: `Your bid must be at least $${auction.currentBid + auction.minBidIncrement}`,
+        description: `Your bid must be higher than the current bid of $${auction.currentBid}`,
       });
       return;
     }
     
-    // In a real app, this would send the bid to the server
-    setAuctions(auctions.map(a => 
-      a.id === auction.id ? { ...a, currentBid: bidAmount } : a
-    ));
+    // Place bid
+    bidMutation.mutate({ auctionId: auction.id, amount: bidAmount });
     
     toast({
       title: "Bid placed!",
-      description: `Your bid of $${bidAmount} for "${auction.title}" has been placed.`,
+      description: `Your bid of $${bidAmount} for "${auction.name}" has been placed.`,
     });
     
     // Clear the input
@@ -138,15 +107,22 @@ const Buyer: React.FC = () => {
   };
 
   // Filter auctions based on active tab and search term
-  const filteredAuctions = auctions.filter(auction => {
-    const matchesTab = activeTab === "all" || auction.category === activeTab;
+  const filteredAuctions = auctions ? auctions.filter(auction => {
+    // Only show active auctions
+    if (auction.status !== "ACTIVE") return false;
+    
+    // Filter by category if a specific tab is selected
+    const matchesTab = activeTab === "all" || 
+                      (auction.category && auction.category.toLowerCase() === activeTab);
+    
+    // Filter by search term
     const matchesSearch = 
-      auction.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      auction.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      auction.description.toLowerCase().includes(searchTerm.toLowerCase());
+      auction.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      auction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (auction.sellerName && auction.sellerName.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesTab && matchesSearch;
-  });
+  }) : [];
 
   return (
     <MainLayout>
@@ -154,7 +130,7 @@ const Buyer: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold mb-2">Buyer Table</h1>
           <p className="text-gray-400">
-            Browse and bid on available artworks in real-time.
+            Browse and bid on available items in real-time.
           </p>
         </div>
         
@@ -169,16 +145,21 @@ const Buyer: React.FC = () => {
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-art-charcoal">
               <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="abstract">Abstract</TabsTrigger>
-              <TabsTrigger value="landscape">Landscape</TabsTrigger>
-              <TabsTrigger value="portrait">Portrait</TabsTrigger>
-              <TabsTrigger value="urban">Urban</TabsTrigger>
+              <TabsTrigger value="electronics">Electronics</TabsTrigger>
+              <TabsTrigger value="collectibles">Collectibles</TabsTrigger>
+              <TabsTrigger value="fashion">Fashion</TabsTrigger>
+              <TabsTrigger value="other">Other</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
         
-        {filteredAuctions.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-art-purple" />
+          </div>
+        ) : filteredAuctions.length === 0 ? (
           <Card className="art-card flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-art-purple/50 mb-4" />
             <h3 className="text-xl font-medium mb-2">No auctions found</h3>
             <p className="text-gray-400">
               Try adjusting your search or filters to see more results.
@@ -190,15 +171,18 @@ const Buyer: React.FC = () => {
               <Card key={auction.id} className="art-card flex flex-col">
                 <div className="aspect-square bg-art-charcoal rounded-md overflow-hidden mb-4">
                   <img 
-                    src={auction.image}
+                    src={auction.imageUrl || "https://via.placeholder.com/500?text=No+Image"} 
                     alt={auction.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/500?text=No+Image";
+                    }}
                   />
                 </div>
                 
                 <CardHeader className="p-0 pb-3">
-                  <CardTitle className="text-xl">{auction.title}</CardTitle>
-                  <p className="text-sm text-art-purple">Artist: {auction.artist}</p>
+                  <CardTitle className="text-xl">{auction.name}</CardTitle>
+                  <p className="text-sm text-art-purple">Seller: {auction.sellerName || "Unknown"}</p>
                 </CardHeader>
                 
                 <CardContent className="p-0 flex-1">
@@ -208,7 +192,7 @@ const Buyer: React.FC = () => {
                     <div>
                       <p className="text-xs text-gray-400">Current Bid</p>
                       <p className="text-lg font-semibold text-art-purple">
-                        ${auction.currentBid.toLocaleString()}
+                        ${auction.currentBid?.toLocaleString() || auction.minBid?.toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -225,7 +209,7 @@ const Buyer: React.FC = () => {
                   <div className="w-full flex space-x-2">
                     <Input
                       type="number"
-                      placeholder={`Min: $${auction.currentBid + auction.minBidIncrement}`}
+                      placeholder={`Min: $${(auction.currentBid || auction.minBid) + 1}`}
                       value={bidAmounts[auction.id] || ""}
                       onChange={(e) => handleBidChange(auction.id, e.target.value)}
                       className="art-input"
@@ -233,8 +217,15 @@ const Buyer: React.FC = () => {
                     <Button 
                       className="bg-art-purple hover:bg-art-purple-dark text-white"
                       onClick={() => handleBidSubmit(auction)}
+                      disabled={bidMutation.isPending}
                     >
-                      <ChevronUp className="h-4 w-4 mr-1" /> Bid
+                      {bidMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <ChevronUp className="h-4 w-4 mr-1" /> Bid
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardFooter>

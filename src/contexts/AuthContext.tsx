@@ -1,14 +1,9 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { authAPI } from "@/services/api";
 import websocket from "@/services/websocket";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: "user" | "admin";
-}
+import { User } from "@/types/user";
 
 interface AuthContextType {
   user: User | null;
@@ -30,29 +25,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const storedUser = localStorage.getItem("artAuctionUser");
-      const token = localStorage.getItem("artAuctionToken");
-
-      if (storedUser && token) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          try {
-            websocket.connect(parsedUser.id);
-          } catch (e) {
-            console.log("WebSocket connection skipped:", e.message);
-          }
-        } catch (e) {
-          localStorage.removeItem("artAuctionUser");
-          localStorage.removeItem("artAuctionToken");
-        }
-      }
-      setIsLoading(false);
-    };
-
     checkAuth();
   }, []);
+
+  const checkAuth = () => {
+    const storedUser = localStorage.getItem("artAuctionUser");
+    const token = localStorage.getItem("artAuctionToken");
+
+    if (storedUser && token) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        try {
+          websocket.connect(parsedUser.id);
+        } catch (e) {
+          console.log("WebSocket connection skipped:", e.message);
+        }
+      } catch (e) {
+        localStorage.removeItem("artAuctionUser");
+        localStorage.removeItem("artAuctionToken");
+      }
+    }
+    setIsLoading(false);
+  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -69,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: userData.name,
         email: userData.email,
         role: Array.isArray(userData.roles) && userData.roles.includes("ROLE_ADMIN") ? 
-              "admin" as const : "user" as const
+              "admin" : "user"
       };
 
       setUser(userObj);
@@ -84,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast({
         title: "Login Successful",
-        description: "Welcome to ART!",
+        description: "Welcome to ART Auction!",
       });
 
     } catch (error: any) {
@@ -113,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: userData.name,
           email: userData.email,
           role: Array.isArray(userData.roles) && userData.roles.includes("ROLE_ADMIN") ? 
-                "admin" as const : "user" as const
+                "admin" : "user"
         };
 
         setUser(userObj);
@@ -128,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         toast({
           title: "Registration Successful",
-          description: "Welcome to ART!",
+          description: "Welcome to ART Auction!",
         });
         return;
       }

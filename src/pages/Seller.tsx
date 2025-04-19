@@ -16,8 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Upload, Clock, CheckCircle, AlertCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2, Upload, AlertCircle } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -28,9 +28,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { auctionsAPI } from "@/services/api";
 
 const Seller = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productName, setProductName] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -43,40 +45,49 @@ const Seller = () => {
   const { data: sellerAuctions, isLoading } = useQuery({
     queryKey: ["seller-auctions"],
     queryFn: async () => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return [
-        { 
-          id: 1, 
-          name: "Vintage Camera", 
-          description: "A beautiful vintage camera from the 1950s.",
-          minBid: 200,
-          currentBid: 230,
-          status: "active",
-          bids: 3,
-          endTime: new Date(Date.now() + 86400000).toISOString()
-        },
-        { 
-          id: 2, 
-          name: "Art Deco Lamp", 
-          description: "Elegant Art Deco lamp with brass finish.",
-          minBid: 150,
-          currentBid: 150,
-          status: "active",
-          bids: 0,
-          endTime: new Date(Date.now() + 172800000).toISOString()
-        },
-        { 
-          id: 3, 
-          name: "Antique Clock", 
-          description: "19th century mahogany mantel clock.",
-          minBid: 300,
-          currentBid: 450,
-          status: "ended",
-          bids: 8,
-          endTime: new Date(Date.now() - 86400000).toISOString()
-        }
-      ];
+      try {
+        const response = await auctionsAPI.getSellerAuctions();
+        return response.data;
+      } catch (error) {
+        console.error("Error fetching seller auctions:", error);
+        return [];
+      }
+    }
+  });
+
+  // Create auction mutation
+  const createAuctionMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return await auctionsAPI.create(formData);
+    },
+    onSuccess: () => {
+      // Reset form
+      setProductName("");
+      setProductDescription("");
+      setMinBid("");
+      setDuration("24");
+      setImageFile(null);
+      setPreviewUrl(null);
+
+      // Invalidate and refetch auctions queries
+      queryClient.invalidateQueries({ queryKey: ["seller-auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
+
+      toast({
+        title: "Product listed",
+        description: "Your item has been listed for auction successfully."
+      });
+    },
+    onError: (error) => {
+      console.error("Error creating auction:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to list your product. Please try again."
+      });
+    },
+    onSettled: () => {
+      setIsSubmitting(false);
     }
   });
 
@@ -115,29 +126,32 @@ const Seller = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      // Reset form
-      setProductName("");
-      setProductDescription("");
-      setMinBid("");
-      setDuration("24");
-      setImageFile(null);
-      setPreviewUrl(null);
+      // Create auction request object
+      const auctionRequest = {
+        name: productName,
+        description: productDescription,
+        minBid: parseFloat(minBid),
+        durationHours: parseInt(duration)
+      };
 
-      toast({
-        title: "Product listed",
-        description: "Your item has been listed for auction successfully."
-      });
+      // Create form data for multipart request
+      const formData = new FormData();
+      formData.append("auction", new Blob([JSON.stringify(auctionRequest)], { type: "application/json" }));
+      formData.append("image", imageFile);
+
+      // Submit the auction
+      await createAuctionMutation.mutateAsync(formData);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to list your product. Please try again."
-      });
-    } finally {
+      console.error("Error in form submission:", error);
       setIsSubmitting(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (error) {
+      return "Invalid date";
     }
   };
 
@@ -283,6 +297,14 @@ const Seller = () => {
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-art-purple" />
                   </div>
+                ) : !sellerAuctions || sellerAuctions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="mx-auto h-12 w-12 text-art-purple/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No auctions found</h3>
+                    <p className="text-gray-400">
+                      You haven't listed any items for auction yet. Create your first listing to get started!
+                    </p>
+                  </div>
                 ) : (
                   <Table>
                     <TableCaption>A list of your auction items.</TableCaption>
@@ -290,27 +312,27 @@ const Seller = () => {
                       <TableRow>
                         <TableHead className="w-[200px]">Item</TableHead>
                         <TableHead className="hidden md:table-cell">Current Bid</TableHead>
-                        <TableHead className="hidden md:table-cell">Bids</TableHead>
+                        <TableHead className="hidden md:table-cell">Min Bid</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>End Time</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sellerAuctions?.map((auction) => (
+                      {sellerAuctions.map((auction) => (
                         <TableRow key={auction.id}>
                           <TableCell className="font-medium">{auction.name}</TableCell>
                           <TableCell className="hidden md:table-cell">
                             ${auction.currentBid}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {auction.bids}
+                            ${auction.minBid}
                           </TableCell>
                           <TableCell>
                             <Badge
                               className={
-                                auction.status === "active" ? "bg-green-600" : 
-                                auction.status === "ended" ? "bg-blue-600" :
+                                auction.status === "ACTIVE" ? "bg-green-600" : 
+                                auction.status === "ENDED" ? "bg-blue-600" :
                                 "bg-red-600"
                               }
                             >
@@ -318,17 +340,16 @@ const Seller = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(auction.endTime).toLocaleDateString()}
+                            {formatDate(auction.endTime)}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button 
                               size="sm" 
                               variant="outline"
-                              disabled={auction.status !== "active"}
                               onClick={() => {
                                 toast({
-                                  title: "Not implemented",
-                                  description: "This feature is not yet implemented."
+                                  title: "View Details",
+                                  description: "Auction details view is coming soon."
                                 });
                               }}
                             >

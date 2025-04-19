@@ -16,3 +16,16 @@ export interface Auction {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AuctionRequest {
+  name: string;
+  description: string;
+  minBid: number;
+  durationHours: number;
+  category?: string;
+}
+
+export interface BidRequest {
+  auctionId: string;
+  amount: number;
+}

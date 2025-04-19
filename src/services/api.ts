@@ -1,5 +1,6 @@
 
 import axios from "axios";
+import { Auction, AuctionRequest } from "@/types/auction";
 
 // For Lovable preview, we'll use mock data instead of connecting to localhost
 const IS_PRODUCTION = window.location.hostname !== "localhost";
@@ -11,6 +12,9 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// Mock data for auctions
+let mockAuctions: Auction[] = [];
 
 // Add a request interceptor to include the JWT token in requests
 api.interceptors.request.use(
@@ -108,6 +112,111 @@ const handleMockResponses = (config) => {
   if (url.includes("/auth/forgot-password") && method.toLowerCase() === "post") {
     return Promise.resolve({
       data: "Password reset instructions sent to your email."
+    });
+  }
+
+  // Mock get all auctions
+  if (url === "/auctions" && method.toLowerCase() === "get") {
+    return Promise.resolve({ data: mockAuctions });
+  }
+
+  // Mock get seller auctions
+  if (url === "/auctions/seller" && method.toLowerCase() === "get") {
+    const token = config.headers["Authorization"];
+    const userId = token ? token.split("-").pop() : null;
+    const sellerAuctions = mockAuctions.filter(auction => auction.sellerId === userId);
+    return Promise.resolve({ data: sellerAuctions });
+  }
+
+  // Mock create auction
+  if (url === "/auctions" && method.toLowerCase() === "post") {
+    const token = config.headers["Authorization"];
+    const userId = token ? token.split("-").pop() : `user-${Date.now()}`;
+    const userName = `User ${userId.substring(0, 4)}`;
+
+    // Handle FormData for file uploads
+    let auctionData: AuctionRequest;
+    if (data instanceof FormData) {
+      // Extract auction data from FormData
+      const formName = data.get('name') as string;
+      const formDescription = data.get('description') as string;
+      const formMinBid = parseFloat(data.get('minBid') as string);
+      const formDurationHours = parseInt(data.get('durationHours') as string);
+      const formCategory = data.get('category') as string;
+      
+      auctionData = {
+        name: formName,
+        description: formDescription,
+        minBid: formMinBid,
+        durationHours: formDurationHours,
+        category: formCategory
+      };
+    } else {
+      // For JSON data
+      auctionData = JSON.parse(data);
+    }
+
+    const now = new Date();
+    const endTime = new Date(now);
+    endTime.setHours(endTime.getHours() + auctionData.durationHours);
+
+    const newAuction: Auction = {
+      id: `auction-${Date.now()}`,
+      name: auctionData.name,
+      description: auctionData.description,
+      sellerId: userId,
+      sellerName: userName,
+      minBid: auctionData.minBid,
+      currentBid: auctionData.minBid,
+      status: "ACTIVE",
+      category: auctionData.category || "other",
+      endTime: endTime.toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      imageUrl: "https://via.placeholder.com/500?text=Auction+Item" // Placeholder image
+    };
+
+    mockAuctions.push(newAuction);
+    return Promise.resolve({ data: newAuction });
+  }
+
+  // Mock place bid
+  if (url === "/bids" && method.toLowerCase() === "post") {
+    const bidData = JSON.parse(data);
+    const { auctionId, amount } = bidData;
+    
+    const auction = mockAuctions.find(a => a.id === auctionId);
+    if (!auction) {
+      return Promise.reject({
+        response: { data: "Auction not found" }
+      });
+    }
+
+    if (amount <= auction.currentBid) {
+      return Promise.reject({
+        response: { data: "Bid amount must be higher than current bid" }
+      });
+    }
+
+    const token = config.headers["Authorization"];
+    const userId = token ? token.split("-").pop() : `user-${Date.now()}`;
+    const userName = `User ${userId.substring(0, 4)}`;
+    
+    // Update auction with new bid
+    auction.currentBid = amount;
+    auction.currentBidderId = userId;
+    auction.currentBidderName = userName;
+    auction.updatedAt = new Date().toISOString();
+    
+    return Promise.resolve({ 
+      data: {
+        id: `bid-${Date.now()}`,
+        auctionId,
+        amount,
+        bidderId: userId,
+        bidderName: userName,
+        createdAt: new Date().toISOString()
+      }
     });
   }
   

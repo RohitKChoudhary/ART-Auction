@@ -8,18 +8,22 @@ import AuctionCardSkeleton from "../auctions/AuctionCardSkeleton";
 import AuctionCard from "../auctions/AuctionCard";
 
 const RecentAuctions: React.FC = () => {
-  const { data: auctions, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["recent-auctions"],
     queryFn: async () => {
       try {
         const response = await auctionsAPI.getAll();
-        return response.data.slice(0, 3); // Get only 3 most recent auctions
+        const auctionsData = Array.isArray(response.data) ? response.data : [];
+        return auctionsData.slice(0, 3); // Get only 3 most recent auctions
       } catch (error) {
         console.error("Error fetching recent auctions:", error);
         return [];
       }
     }
   });
+
+  // Ensure auctions is always an array
+  const auctions = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return (

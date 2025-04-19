@@ -5,23 +5,31 @@ import { useQuery } from "@tanstack/react-query";
 import { auctionsAPI } from "@/services/api";
 
 const StatsOverview: React.FC = () => {
-  const { data: auctions } = useQuery({
+  const { data: auctions, isLoading, error } = useQuery({
     queryKey: ["active-auctions"],
     queryFn: async () => {
       try {
         const response = await auctionsAPI.getAll();
+        // Ensure we always return an array
         return Array.isArray(response.data) ? response.data : [];
       } catch (error) {
+        console.error("Error fetching auction stats:", error);
         return [];
       }
     }
   });
 
-  // Count metrics based on auctions data
-  const activeAuctions = auctions?.filter(auction => auction.status === "ACTIVE")?.length || 0;
-  const totalAuctions = auctions?.length || 0;
-  const highestBid = auctions?.reduce((max, auction) => 
-    Math.max(max, auction.currentBid || 0), 0) || 0;
+  // Count metrics based on auctions data - ensure we handle undefined or null
+  const activeAuctions = Array.isArray(auctions) 
+    ? auctions.filter(auction => auction?.status === "ACTIVE").length 
+    : 0;
+  
+  const totalAuctions = Array.isArray(auctions) ? auctions.length : 0;
+  
+  const highestBid = Array.isArray(auctions) 
+    ? auctions.reduce((max, auction) => 
+        Math.max(max, auction?.currentBid || 0), 0) 
+    : 0;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

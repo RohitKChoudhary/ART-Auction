@@ -21,7 +21,7 @@ const NavItem: React.FC<NavItemProps> = ({ item }) => {
     <Button
       variant="ghost"
       className={cn(
-        "flex items-center justify-start space-x-3 px-3 py-6",
+        "flex w-full items-center justify-start space-x-3 px-3 py-6",
         isActive
           ? "bg-art-purple/20 text-art-purple"
           : "text-gray-300 hover:bg-art-purple/10 hover:text-art-purple"

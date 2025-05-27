@@ -12,12 +12,12 @@ const api = axios.create({
   },
 });
 
-// Mock data storage - Initialize with proper data
+// Mock data storage with proper initialization
 let mockAuctions: Auction[] = [
   {
     id: "auction-1",
     name: "Vintage Art Painting",
-    description: "Beautiful vintage painting from the 19th century",
+    description: "Beautiful vintage painting from the 19th century with ornate frame",
     sellerId: "user-1",
     sellerName: "John Artist",
     minBid: 100,
@@ -28,13 +28,13 @@ let mockAuctions: Auction[] = [
     status: "ACTIVE",
     category: "art",
     endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   },
   {
     id: "auction-2", 
-    name: "Antique Vase",
-    description: "Rare antique vase from Ming dynasty",
+    name: "Antique Ming Vase",
+    description: "Rare antique vase from Ming dynasty, excellent condition",
     sellerId: "user-3",
     sellerName: "Mike Antiques",
     minBid: 500,
@@ -45,13 +45,13 @@ let mockAuctions: Auction[] = [
     status: "ACTIVE", 
     category: "antiques",
     endTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   },
   {
     id: "auction-3",
-    name: "Modern Sculpture",
-    description: "Contemporary bronze sculpture by emerging artist",
+    name: "Modern Bronze Sculpture",
+    description: "Contemporary bronze sculpture by emerging artist, limited edition",
     sellerId: "admin-1",
     sellerName: "ART Admin",
     minBid: 800,
@@ -60,7 +60,7 @@ let mockAuctions: Auction[] = [
     status: "ACTIVE",
     category: "art", 
     endTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   }
 ];
@@ -104,14 +104,14 @@ let mockUsers = [
   }
 ];
 
-// Add request interceptor
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("artAuctionToken");
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
-    console.log(`[API] Request: ${config.method?.toUpperCase()} ${config.url}`, config.data);
+    console.log(`[API] Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
@@ -120,17 +120,16 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for mock data
+// Response interceptor for mock data
 api.interceptors.response.use(
   (response) => {
     console.log(`[API] Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
     return response;
   },
   async (error) => {
-    console.log(`[API] Error for ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, error.message);
+    console.log(`[API] Backend error, using mock data for ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
     
     if (error.code === 'ECONNREFUSED' || error.message === "Network Error" || error.code === 'ERR_NETWORK') {
-      console.log("[API] Backend not available, using mock data");
       return handleMockResponses(error.config);
     }
     
@@ -222,7 +221,7 @@ const handleMockResponses = async (config) => {
     }
     
     return Promise.reject({
-      response: { data: "Invalid credentials: Email or password is incorrect" }
+      response: { data: "Invalid credentials" }
     });
   }
   
@@ -301,8 +300,8 @@ const handleMockResponses = async (config) => {
       imageUrl: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=500"
     };
 
-    mockAuctions.push(newAuction);
-    console.log("[Mock API] Created new auction:", newAuction.id);
+    mockAuctions.unshift(newAuction); // Add to beginning for newest first
+    console.log("[Mock API] Created new auction:", newAuction.id, "Total auctions:", mockAuctions.length);
     return Promise.resolve({ data: newAuction });
   }
 
@@ -378,7 +377,7 @@ const handleMockResponses = async (config) => {
   });
 };
 
-// Auth API
+// API exports
 export const authAPI = {
   login: (email: string, password: string) => 
     api.post("/auth/login", { email, password }),
@@ -390,7 +389,6 @@ export const authAPI = {
     api.post("/auth/forgot-password", null, { params: { email } }),
 };
 
-// Auctions API
 export const auctionsAPI = {
   getAll: () => api.get("/auctions"),
   
@@ -408,7 +406,6 @@ export const auctionsAPI = {
   cancel: (id: string) => api.put(`/auctions/${id}/cancel`),
 };
 
-// Bids API
 export const bidsAPI = {
   getByAuction: (auctionId: string) => 
     api.get(`/bids/auction/${auctionId}`),
@@ -419,7 +416,6 @@ export const bidsAPI = {
     api.post("/bids", { auctionId, amount }),
 };
 
-// Users API
 export const usersAPI = {
   getProfile: () => api.get("/users/profile"),
   
@@ -434,7 +430,6 @@ export const usersAPI = {
     api.put("/users/profile", updates),
 };
 
-// Messages API
 export const messagesAPI = {
   getAll: () => api.get("/messages"),
   

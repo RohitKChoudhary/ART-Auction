@@ -23,25 +23,25 @@ const NotificationHandler: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    console.log('[NotificationHandler] Setting up notifications for user:', user.id);
+    console.log('[NotificationHandler] Setting up notifications for user:', user.name);
     
     const unsubscribe = websocket.onNotification((notification) => {
       console.log('[NotificationHandler] Received notification:', notification);
       
       const newNotification: Notification = {
-        id: `notif-${Date.now()}`,
+        id: `notif-${Date.now()}-${Math.random()}`,
         type: notification.type,
         message: notification.message,
         timestamp: notification.timestamp,
         read: false
       };
       
-      setNotifications(prev => [newNotification, ...prev]);
+      setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Keep only 10 notifications
       setUnreadCount(prev => prev + 1);
       
       // Show toast notification
       toast({
-        title: "New Notification",
+        title: getNotificationTitle(notification.type),
         description: notification.message,
         duration: 5000,
       });
@@ -53,9 +53,28 @@ const NotificationHandler: React.FC = () => {
     };
   }, [user, toast]);
 
+  const getNotificationTitle = (type: string) => {
+    switch (type) {
+      case 'new_bid':
+        return "New Bid";
+      case 'auction_ended':
+        return "Auction Ended";
+      case 'auction_won':
+        return "Auction Won";
+      default:
+        return "Notification";
+    }
+  };
+
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
+    
+    toast({
+      title: "Notifications",
+      description: `Marked ${unreadCount} notifications as read.`,
+      duration: 2000,
+    });
   };
 
   if (!user) return null;
@@ -66,8 +85,8 @@ const NotificationHandler: React.FC = () => {
         variant="ghost"
         size="sm"
         onClick={markAllAsRead}
-        className="relative"
-        title="Notifications"
+        className="relative text-white hover:bg-art-purple/20"
+        title={`${unreadCount} unread notifications`}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

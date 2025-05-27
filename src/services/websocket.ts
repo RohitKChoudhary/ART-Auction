@@ -1,6 +1,4 @@
 
-const IS_PRODUCTION = window.location.hostname !== "localhost";
-
 interface MockNotification {
   type: 'auction_ended' | 'new_bid' | 'auction_won';
   message: string;
@@ -11,6 +9,7 @@ interface MockNotification {
 let notificationCallbacks: ((notification: MockNotification) => void)[] = [];
 let isConnected = false;
 let intervalId: NodeJS.Timeout | null = null;
+let bidNotificationTimeout: NodeJS.Timeout | null = null;
 
 const websocket = {
   connect: (userId: string) => {
@@ -26,16 +25,16 @@ const websocket = {
         clearInterval(intervalId);
       }
       
-      // Simulate periodic auction ending notifications
+      // Simulate periodic auction ending notifications (less frequent for testing)
       intervalId = setInterval(() => {
         if (isConnected && notificationCallbacks.length > 0) {
           const mockNotification: MockNotification = {
             type: 'auction_ended',
-            message: `An auction you were watching has ended!`,
+            message: `An auction you were watching has ended! Check the results.`,
             timestamp: new Date().toISOString()
           };
           
-          console.log('[WebSocket] Sending notification:', mockNotification);
+          console.log('[WebSocket] Sending auction end notification:', mockNotification);
           notificationCallbacks.forEach(callback => {
             try {
               callback(mockNotification);
@@ -44,7 +43,7 @@ const websocket = {
             }
           });
         }
-      }, 30000); // Every 30 seconds for testing
+      }, 45000); // Every 45 seconds for testing
     }, 1000);
     
     return true;
@@ -58,6 +57,11 @@ const websocket = {
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
+    }
+    
+    if (bidNotificationTimeout) {
+      clearTimeout(bidNotificationTimeout);
+      bidNotificationTimeout = null;
     }
   },
 
@@ -82,15 +86,20 @@ const websocket = {
     
     const notification: MockNotification = {
       type: 'new_bid',
-      message: `New bid of $${bidAmount} placed by ${bidderName}`,
+      message: `New bid of $${bidAmount.toLocaleString()} placed by ${bidderName}`,
       auctionId,
       timestamp: new Date().toISOString()
     };
     
     console.log('[WebSocket] Sending bid notification:', notification);
     
-    // Simulate network delay
-    setTimeout(() => {
+    // Clear existing timeout if any
+    if (bidNotificationTimeout) {
+      clearTimeout(bidNotificationTimeout);
+    }
+    
+    // Simulate network delay for bid notification
+    bidNotificationTimeout = setTimeout(() => {
       notificationCallbacks.forEach(callback => {
         try {
           callback(notification);
@@ -98,7 +107,7 @@ const websocket = {
           console.error('[WebSocket] Error in bid notification callback:', error);
         }
       });
-    }, 500);
+    }, 800);
   },
 
   isConnected: () => isConnected

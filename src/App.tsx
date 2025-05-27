@@ -31,8 +31,14 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
     return <Navigate to="/login" />;
   }
 
-  if (requireAdmin && user?.role !== "admin") {
-    return <Navigate to="/dashboard" />;
+  // Check if user has admin role
+  if (requireAdmin) {
+    const hasAdminRole = user?.roles?.includes("ROLE_ADMIN") || false;
+    console.log("Admin check:", { user: user?.email, roles: user?.roles, hasAdminRole });
+    
+    if (!hasAdminRole) {
+      return <Navigate to="/dashboard" />;
+    }
   }
   
   return <>{children}</>;

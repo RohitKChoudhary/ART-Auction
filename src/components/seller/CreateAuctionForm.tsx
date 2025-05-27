@@ -22,15 +22,9 @@ const CreateAuctionForm = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const createAuctionMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      console.log("Submitting auction form data:", {
-        name: formData.get('name'),
-        description: formData.get('description'),
-        minBid: formData.get('minBid'),
-        durationHours: formData.get('durationHours'),
-        category: formData.get('category')
-      });
-      return await auctionsAPI.create(formData);
+    mutationFn: async (auctionData: any) => {
+      console.log("Creating auction with data:", auctionData);
+      return await auctionsAPI.create(auctionData);
     },
     onSuccess: (response) => {
       console.log("Auction created successfully:", response.data);
@@ -44,9 +38,10 @@ const CreateAuctionForm = () => {
       setImageFile(null);
       setPreviewUrl(null);
 
-      // Invalidate queries to refresh data
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["seller-auctions"] });
       queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
       queryClient.invalidateQueries({ queryKey: ["admin-auctions"] });
 
       toast({
@@ -71,7 +66,6 @@ const CreateAuctionForm = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           variant: "destructive",
@@ -93,7 +87,6 @@ const CreateAuctionForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
     if (!productName.trim()) {
       toast({
         variant: "destructive",
@@ -121,15 +114,6 @@ const CreateAuctionForm = () => {
       return;
     }
 
-    if (!duration || parseInt(duration) <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid duration",
-        description: "Please enter a valid auction duration."
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -140,11 +124,10 @@ const CreateAuctionForm = () => {
       formData.append("durationHours", duration);
       formData.append("category", category);
       
-      // Add a placeholder image if none selected
       if (imageFile) {
         formData.append("image", imageFile);
       } else {
-        // Create a placeholder blob
+        // Create a simple placeholder blob
         const canvas = document.createElement('canvas');
         canvas.width = 400;
         canvas.height = 300;
@@ -161,8 +144,10 @@ const CreateAuctionForm = () => {
         canvas.toBlob((blob) => {
           if (blob) {
             formData.append("image", blob, "placeholder.png");
+            createAuctionMutation.mutate(formData);
           }
         });
+        return;
       }
 
       await createAuctionMutation.mutateAsync(formData);

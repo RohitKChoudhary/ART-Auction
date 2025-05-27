@@ -36,12 +36,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
+        console.log("[Auth] Restored user session:", parsedUser.id);
+        
+        // Connect to WebSocket
         try {
           websocket.connect(parsedUser.id);
         } catch (e) {
-          console.log("WebSocket connection skipped:", e.message);
+          console.log("[Auth] WebSocket connection failed:", e.message);
         }
       } catch (e) {
+        console.error("[Auth] Invalid stored user data:", e);
         localStorage.removeItem("artAuctionUser");
         localStorage.removeItem("artAuctionToken");
       }
@@ -52,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("[Auth] Attempting login for:", email);
       const response = await authAPI.login(email, password);
       const userData = response.data;
       
@@ -71,19 +76,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
       localStorage.setItem("artAuctionToken", userData.token);
       
+      console.log("[Auth] Login successful, user role:", userObj.role);
+      
+      // Connect to WebSocket
       try {
         websocket.connect(userObj.id);
       } catch (e) {
-        console.log("WebSocket connection skipped:", e.message);
+        console.log("[Auth] WebSocket connection failed:", e.message);
       }
 
       toast({
         title: "Login Successful",
-        description: "Welcome to ART Auction!",
+        description: `Welcome ${userObj.name}!`,
       });
 
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("[Auth] Login error:", error);
       const errorMessage = error.response?.data || "Invalid credentials. Please try again.";
       toast({
         variant: "destructive",
@@ -99,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("[Auth] Attempting registration for:", email);
       const response = await authAPI.register(name, email, password);
       const userData = response.data;
       
@@ -115,15 +124,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem("artAuctionUser", JSON.stringify(userObj));
         localStorage.setItem("artAuctionToken", userData.token);
         
+        console.log("[Auth] Registration successful, user role:", userObj.role);
+        
+        // Connect to WebSocket
         try {
           websocket.connect(userObj.id);
         } catch (e) {
-          console.log("WebSocket connection skipped:", e.message);
+          console.log("[Auth] WebSocket connection failed:", e.message);
         }
 
         toast({
           title: "Registration Successful",
-          description: "Welcome to ART Auction!",
+          description: `Welcome to ART Auction, ${userObj.name}!`,
         });
         return;
       }
@@ -134,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("[Auth] Registration error:", error);
       const errorMessage = error.response?.data || "An error occurred during registration.";
       toast({
         variant: "destructive",
@@ -148,10 +160,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    console.log("[Auth] Logging out user:", user?.id);
+    
     try {
       websocket.disconnect();
     } catch (e) {
-      console.log("WebSocket disconnect skipped:", e.message);
+      console.log("[Auth] WebSocket disconnect failed:", e.message);
     }
     
     setUser(null);
@@ -173,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Check your inbox for password reset instructions.",
       });
     } catch (error: any) {
-      console.error("Password reset error:", error);
+      console.error("[Auth] Password reset error:", error);
       const errorMessage = error.response?.data || "An error occurred. Please try again.";
       toast({
         variant: "destructive",

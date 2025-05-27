@@ -10,6 +10,7 @@ interface MockNotification {
 
 let notificationCallbacks: ((notification: MockNotification) => void)[] = [];
 let isConnected = false;
+let intervalId: NodeJS.Timeout | null = null;
 
 const websocket = {
   connect: (userId: string) => {
@@ -20,8 +21,13 @@ const websocket = {
     setTimeout(() => {
       console.log(`[WebSocket] Connected successfully for user: ${userId}`);
       
+      // Clear any existing interval
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      
       // Simulate periodic auction ending notifications
-      setInterval(() => {
+      intervalId = setInterval(() => {
         if (isConnected && notificationCallbacks.length > 0) {
           const mockNotification: MockNotification = {
             type: 'auction_ended',
@@ -38,7 +44,7 @@ const websocket = {
             }
           });
         }
-      }, 45000); // Every 45 seconds
+      }, 30000); // Every 30 seconds for testing
     }, 1000);
     
     return true;
@@ -48,6 +54,11 @@ const websocket = {
     console.log('[WebSocket] Disconnecting');
     isConnected = false;
     notificationCallbacks = [];
+    
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
   },
 
   onNotification: (callback: (notification: MockNotification) => void) => {

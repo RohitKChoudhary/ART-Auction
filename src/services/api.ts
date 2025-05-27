@@ -1,6 +1,7 @@
 
 import axios from "axios";
 import { Auction, AuctionRequest } from "@/types/auction";
+import websocket from "@/services/websocket";
 
 const IS_PRODUCTION = window.location.hostname !== "localhost";
 
@@ -110,21 +111,29 @@ api.interceptors.request.use(
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
+    console.log(`[API] Request: ${config.method?.toUpperCase()} ${config.url}`, config.data);
     return config;
   },
   (error) => {
+    console.error("[API] Request error:", error);
     return Promise.reject(error);
   }
 );
 
 // Add response interceptor for mock data
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`[API] Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
+    return response;
+  },
   async (error) => {
-    if (IS_PRODUCTION && error.message === "Network Error") {
-      console.log("Using mock data instead of real backend");
+    console.log(`[API] Error for ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, error.message);
+    
+    if (error.code === 'ECONNREFUSED' || error.message === "Network Error" || error.code === 'ERR_NETWORK') {
+      console.log("[API] Backend not available, using mock data");
       return handleMockResponses(error.config);
     }
+    
     return Promise.reject(error);
   }
 );
@@ -132,11 +141,11 @@ api.interceptors.response.use(
 const handleMockResponses = async (config) => {
   const { url, method, data } = config;
   
-  console.log(`Mock API call: ${method?.toUpperCase()} ${url}`, data);
+  console.log(`[Mock API] ${method?.toUpperCase()} ${url}`);
   
   // Auth endpoints
   if (url === "/auth/signup" && method?.toLowerCase() === "post") {
-    const userData = JSON.parse(data);
+    const userData = typeof data === 'string' ? JSON.parse(data) : data;
     
     if (!userData.name || !userData.email || !userData.password) {
       return Promise.reject({
@@ -166,7 +175,7 @@ const handleMockResponses = async (config) => {
   }
   
   if (url === "/auth/login" && method?.toLowerCase() === "post") {
-    const loginData = JSON.parse(data);
+    const loginData = typeof data === 'string' ? JSON.parse(data) : data;
     
     if (loginData.email === "art123bets@gmail.com" && loginData.password === "ARTROCKS123") {
       return Promise.resolve({
@@ -225,7 +234,7 @@ const handleMockResponses = async (config) => {
 
   // Auction endpoints
   if (url === "/auctions" && method?.toLowerCase() === "get") {
-    console.log("Returning mock auctions:", mockAuctions);
+    console.log("[Mock API] Returning auctions:", mockAuctions.length);
     return Promise.resolve({ data: mockAuctions });
   }
 
@@ -236,9 +245,9 @@ const handleMockResponses = async (config) => {
     }
     
     const userId = token.replace("Bearer mock-token-", "");
-    console.log("Getting seller auctions for user:", userId);
+    console.log("[Mock API] Getting seller auctions for user:", userId);
     const sellerAuctions = mockAuctions.filter(auction => auction.sellerId === userId);
-    console.log("Found seller auctions:", sellerAuctions);
+    console.log("[Mock API] Found seller auctions:", sellerAuctions.length);
     return Promise.resolve({ data: sellerAuctions });
   }
 
@@ -293,7 +302,7 @@ const handleMockResponses = async (config) => {
     };
 
     mockAuctions.push(newAuction);
-    console.log("Created new auction:", newAuction);
+    console.log("[Mock API] Created new auction:", newAuction.id);
     return Promise.resolve({ data: newAuction });
   }
 
@@ -325,6 +334,11 @@ const handleMockResponses = async (config) => {
     auction.currentBidderName = userName;
     auction.updatedAt = new Date().toISOString();
     
+    console.log("[Mock API] Bid placed, notifying via WebSocket");
+    setTimeout(() => {
+      websocket.sendBidNotification(auctionId, amount, userName);
+    }, 100);
+    
     return Promise.resolve({ 
       data: {
         id: `bid-${Date.now()}`,
@@ -339,7 +353,7 @@ const handleMockResponses = async (config) => {
 
   // User endpoints
   if (url === "/users" && method?.toLowerCase() === "get") {
-    console.log("Returning mock users:", mockUsers);
+    console.log("[Mock API] Returning users:", mockUsers.length);
     return Promise.resolve({ data: mockUsers });
   }
 
@@ -358,6 +372,7 @@ const handleMockResponses = async (config) => {
     return Promise.reject({ response: { data: "User not found" } });
   }
   
+  console.log("[Mock API] Endpoint not implemented:", method, url);
   return Promise.reject({
     response: { data: "This API endpoint is not available in preview mode." }
   });

@@ -11,7 +11,7 @@ const api = axios.create({
   },
 });
 
-// Mock data storage
+// Mock data storage - Initialize with proper data
 let mockAuctions: Auction[] = [
   {
     id: "auction-1",
@@ -23,7 +23,7 @@ let mockAuctions: Auction[] = [
     currentBid: 150,
     currentBidderId: "user-2",
     currentBidderName: "Jane Collector",
-    imageUrl: "https://via.placeholder.com/500?text=Vintage+Art",
+    imageUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500",
     status: "ACTIVE",
     category: "art",
     endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -37,11 +37,28 @@ let mockAuctions: Auction[] = [
     sellerId: "user-3",
     sellerName: "Mike Antiques",
     minBid: 500,
-    currentBid: 500,
-    imageUrl: "https://via.placeholder.com/500?text=Antique+Vase",
+    currentBid: 750,
+    currentBidderId: "user-1",
+    currentBidderName: "John Artist",
+    imageUrl: "https://images.unsplash.com/photo-1578662015725-2d4b2d8b3e8c?w=500",
     status: "ACTIVE", 
     category: "antiques",
     endTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "auction-3",
+    name: "Modern Sculpture",
+    description: "Contemporary bronze sculpture by emerging artist",
+    sellerId: "admin-1",
+    sellerName: "ART Admin",
+    minBid: 800,
+    currentBid: 800,
+    imageUrl: "https://images.unsplash.com/photo-1594736797933-d0402ba2fe65?w=500",
+    status: "ACTIVE",
+    category: "art", 
+    endTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
@@ -54,7 +71,7 @@ let mockUsers = [
     email: "john@example.com",
     roles: ["ROLE_USER"],
     active: true,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   },
   {
@@ -63,7 +80,7 @@ let mockUsers = [
     email: "jane@example.com",
     roles: ["ROLE_USER"],
     active: true,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   },
   {
@@ -72,7 +89,7 @@ let mockUsers = [
     email: "mike@example.com",
     roles: ["ROLE_USER"],
     active: true,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   },
   {
@@ -81,11 +98,12 @@ let mockUsers = [
     email: "art123bets@gmail.com", 
     roles: ["ROLE_USER", "ROLE_ADMIN"],
     active: true,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString()
   }
 ];
 
+// Add request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("artAuctionToken");
@@ -99,9 +117,10 @@ api.interceptors.request.use(
   }
 );
 
+// Add response interceptor for mock data
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (IS_PRODUCTION && error.message === "Network Error") {
       console.log("Using mock data instead of real backend");
       return handleMockResponses(error.config);
@@ -110,11 +129,13 @@ api.interceptors.response.use(
   }
 );
 
-const handleMockResponses = (config) => {
+const handleMockResponses = async (config) => {
   const { url, method, data } = config;
   
-  // Mock user registration
-  if (url === "/auth/signup" && method.toLowerCase() === "post") {
+  console.log(`Mock API call: ${method?.toUpperCase()} ${url}`, data);
+  
+  // Auth endpoints
+  if (url === "/auth/signup" && method?.toLowerCase() === "post") {
     const userData = JSON.parse(data);
     
     if (!userData.name || !userData.email || !userData.password) {
@@ -136,18 +157,15 @@ const handleMockResponses = (config) => {
     
     mockUsers.push(newUser);
     
-    const mockResponse = {
+    return Promise.resolve({
       data: {
         ...newUser,
         token: `mock-token-${userId}`
       }
-    };
-    
-    return Promise.resolve(mockResponse);
+    });
   }
   
-  // Mock login
-  if (url === "/auth/login" && method.toLowerCase() === "post") {
+  if (url === "/auth/login" && method?.toLowerCase() === "post") {
     const loginData = JSON.parse(data);
     
     if (loginData.email === "art123bets@gmail.com" && loginData.password === "ARTROCKS123") {
@@ -166,13 +184,11 @@ const handleMockResponses = (config) => {
       let userId = `user-${Date.now()}`;
       let userName = loginData.email.split("@")[0];
       
-      // Check if user already exists
       const existingUser = mockUsers.find(u => u.email === loginData.email);
       if (existingUser) {
         userId = existingUser.id;
         userName = existingUser.name;
       } else {
-        // Add new user to mock users
         const newUser = {
           id: userId,
           name: userName,
@@ -201,34 +217,38 @@ const handleMockResponses = (config) => {
     });
   }
   
-  // Mock forgot password
-  if (url.includes("/auth/forgot-password") && method.toLowerCase() === "post") {
+  if (url?.includes("/auth/forgot-password") && method?.toLowerCase() === "post") {
     return Promise.resolve({
       data: "Password reset instructions sent to your email."
     });
   }
 
-  // Mock get all auctions
-  if (url === "/auctions" && method.toLowerCase() === "get") {
+  // Auction endpoints
+  if (url === "/auctions" && method?.toLowerCase() === "get") {
+    console.log("Returning mock auctions:", mockAuctions);
     return Promise.resolve({ data: mockAuctions });
   }
 
-  // Mock get seller auctions
-  if (url === "/auctions/seller" && method.toLowerCase() === "get") {
+  if (url === "/auctions/seller" && method?.toLowerCase() === "get") {
     const token = config.headers["Authorization"];
-    const userId = token ? token.replace("Bearer mock-token-", "") : null;
+    if (!token) {
+      return Promise.reject({ response: { data: "No token provided" } });
+    }
+    
+    const userId = token.replace("Bearer mock-token-", "");
     console.log("Getting seller auctions for user:", userId);
     const sellerAuctions = mockAuctions.filter(auction => auction.sellerId === userId);
     console.log("Found seller auctions:", sellerAuctions);
     return Promise.resolve({ data: sellerAuctions });
   }
 
-  // Mock create auction
-  if (url === "/auctions" && method.toLowerCase() === "post") {
+  if (url === "/auctions" && method?.toLowerCase() === "post") {
     const token = config.headers["Authorization"];
-    const userId = token ? token.replace("Bearer mock-token-", "") : `user-${Date.now()}`;
+    if (!token) {
+      return Promise.reject({ response: { data: "No token provided" } });
+    }
     
-    // Find user for seller name
+    const userId = token.replace("Bearer mock-token-", "");
     const user = mockUsers.find(u => u.id === userId);
     const userName = user ? user.name : `User ${userId.substring(0, 4)}`;
 
@@ -242,12 +262,19 @@ const handleMockResponses = (config) => {
         category: data.get('category') as string || "other"
       };
     } else {
-      auctionData = JSON.parse(data);
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      auctionData = parsedData;
+    }
+
+    if (!auctionData.name || !auctionData.description || !auctionData.minBid) {
+      return Promise.reject({
+        response: { data: "Missing required fields" }
+      });
     }
 
     const now = new Date();
     const endTime = new Date(now);
-    endTime.setHours(endTime.getHours() + auctionData.durationHours);
+    endTime.setHours(endTime.getHours() + (auctionData.durationHours || 24));
 
     const newAuction: Auction = {
       id: `auction-${Date.now()}`,
@@ -262,18 +289,17 @@ const handleMockResponses = (config) => {
       endTime: endTime.toISOString(),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      imageUrl: "https://via.placeholder.com/500?text=Auction+Item"
+      imageUrl: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=500"
     };
 
     mockAuctions.push(newAuction);
     console.log("Created new auction:", newAuction);
-    console.log("Total auctions now:", mockAuctions.length);
     return Promise.resolve({ data: newAuction });
   }
 
-  // Mock place bid
-  if (url === "/bids" && method.toLowerCase() === "post") {
-    const bidData = JSON.parse(data);
+  // Bid endpoints
+  if (url === "/bids" && method?.toLowerCase() === "post") {
+    const bidData = typeof data === 'string' ? JSON.parse(data) : data;
     const { auctionId, amount } = bidData;
     
     const auction = mockAuctions.find(a => a.id === auctionId);
@@ -311,15 +337,19 @@ const handleMockResponses = (config) => {
     });
   }
 
-  // Mock get all users (for admin)
-  if (url === "/users" && method.toLowerCase() === "get") {
+  // User endpoints
+  if (url === "/users" && method?.toLowerCase() === "get") {
+    console.log("Returning mock users:", mockUsers);
     return Promise.resolve({ data: mockUsers });
   }
 
-  // Mock get user profile
-  if (url === "/users/profile" && method.toLowerCase() === "get") {
+  if (url === "/users/profile" && method?.toLowerCase() === "get") {
     const token = config.headers["Authorization"];
-    const userId = token ? token.replace("Bearer mock-token-", "") : null;
+    if (!token) {
+      return Promise.reject({ response: { data: "No token provided" } });
+    }
+    
+    const userId = token.replace("Bearer mock-token-", "");
     const user = mockUsers.find(u => u.id === userId);
     
     if (user) {

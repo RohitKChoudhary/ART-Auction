@@ -9,59 +9,88 @@ interface MockNotification {
 }
 
 let notificationCallbacks: ((notification: MockNotification) => void)[] = [];
+let isConnected = false;
 
 const websocket = {
   connect: (userId: string) => {
-    if (IS_PRODUCTION) {
-      console.log(`[Mock WebSocket] Connected for user: ${userId}`);
+    console.log(`[WebSocket] Connecting for user: ${userId}`);
+    isConnected = true;
+    
+    // Simulate connection delay
+    setTimeout(() => {
+      console.log(`[WebSocket] Connected successfully for user: ${userId}`);
       
-      // Simulate auction ending notifications after 30 seconds
-      setTimeout(() => {
-        const mockNotification: MockNotification = {
-          type: 'auction_ended',
-          message: `An auction you were watching has ended!`,
-          timestamp: new Date().toISOString()
-        };
-        
-        notificationCallbacks.forEach(callback => callback(mockNotification));
-      }, 30000);
-      
-      return true;
-    }
-
-    console.log(`[WebSocket] Attempting to connect for user: ${userId}`);
+      // Simulate periodic auction ending notifications
+      setInterval(() => {
+        if (isConnected && notificationCallbacks.length > 0) {
+          const mockNotification: MockNotification = {
+            type: 'auction_ended',
+            message: `An auction you were watching has ended!`,
+            timestamp: new Date().toISOString()
+          };
+          
+          console.log('[WebSocket] Sending notification:', mockNotification);
+          notificationCallbacks.forEach(callback => {
+            try {
+              callback(mockNotification);
+            } catch (error) {
+              console.error('[WebSocket] Error in notification callback:', error);
+            }
+          });
+        }
+      }, 45000); // Every 45 seconds
+    }, 1000);
+    
     return true;
   },
 
   disconnect: () => {
-    if (IS_PRODUCTION) {
-      console.log('[Mock WebSocket] Disconnected');
-      notificationCallbacks = [];
-      return;
-    }
-
-    console.log('[WebSocket] Disconnected');
+    console.log('[WebSocket] Disconnecting');
+    isConnected = false;
+    notificationCallbacks = [];
   },
 
   onNotification: (callback: (notification: MockNotification) => void) => {
+    console.log('[WebSocket] Adding notification callback');
     notificationCallbacks.push(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      const index = notificationCallbacks.indexOf(callback);
+      if (index > -1) {
+        notificationCallbacks.splice(index, 1);
+      }
+    };
   },
 
   sendBidNotification: (auctionId: string, bidAmount: number, bidderName: string) => {
-    if (IS_PRODUCTION) {
-      const notification: MockNotification = {
-        type: 'new_bid',
-        message: `New bid of $${bidAmount} placed by ${bidderName}`,
-        auctionId,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Simulate delay and notify all callbacks
-      setTimeout(() => {
-        notificationCallbacks.forEach(callback => callback(notification));
-      }, 1000);
+    if (!isConnected) {
+      console.warn('[WebSocket] Not connected, cannot send bid notification');
+      return;
     }
-  }
+    
+    const notification: MockNotification = {
+      type: 'new_bid',
+      message: `New bid of $${bidAmount} placed by ${bidderName}`,
+      auctionId,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('[WebSocket] Sending bid notification:', notification);
+    
+    // Simulate network delay
+    setTimeout(() => {
+      notificationCallbacks.forEach(callback => {
+        try {
+          callback(notification);
+        } catch (error) {
+          console.error('[WebSocket] Error in bid notification callback:', error);
+        }
+      });
+    }, 500);
+  },
+
+  isConnected: () => isConnected
 };
 
 export default websocket;

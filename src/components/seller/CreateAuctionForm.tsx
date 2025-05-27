@@ -23,9 +23,19 @@ const CreateAuctionForm = () => {
 
   const createAuctionMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      console.log("Submitting auction form data:", {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        minBid: formData.get('minBid'),
+        durationHours: formData.get('durationHours'),
+        category: formData.get('category')
+      });
       return await auctionsAPI.create(formData);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log("Auction created successfully:", response.data);
+      
+      // Reset form
       setProductName("");
       setProductDescription("");
       setMinBid("");
@@ -34,21 +44,23 @@ const CreateAuctionForm = () => {
       setImageFile(null);
       setPreviewUrl(null);
 
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["seller-auctions"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
       queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-auctions"] });
 
       toast({
-        title: "Product listed",
+        title: "Auction Created",
         description: "Your item has been listed for auction successfully."
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error creating auction:", error);
+      const errorMessage = error.response?.data || "Failed to create auction. Please try again.";
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to list your product. Please try again."
+        description: errorMessage
       });
     },
     onSettled: () => {
@@ -59,6 +71,16 @@ const CreateAuctionForm = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "File too large",
+          description: "Please select an image under 5MB."
+        });
+        return;
+      }
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -70,20 +92,40 @@ const CreateAuctionForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productName || !productDescription || !minBid || !duration) {
+    
+    // Validation
+    if (!productName.trim()) {
       toast({
         variant: "destructive",
         title: "Missing information",
-        description: "Please fill in all fields."
+        description: "Please enter a product name."
       });
       return;
     }
 
-    if (!imageFile) {
+    if (!productDescription.trim()) {
       toast({
         variant: "destructive",
-        title: "Missing image",
-        description: "Please upload an image for your product."
+        title: "Missing information",
+        description: "Please enter a product description."
+      });
+      return;
+    }
+
+    if (!minBid || parseFloat(minBid) <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid bid amount",
+        description: "Please enter a valid minimum bid amount."
+      });
+      return;
+    }
+
+    if (!duration || parseInt(duration) <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid duration",
+        description: "Please enter a valid auction duration."
       });
       return;
     }
@@ -92,12 +134,36 @@ const CreateAuctionForm = () => {
 
     try {
       const formData = new FormData();
-      formData.append("name", productName);
-      formData.append("description", productDescription);
+      formData.append("name", productName.trim());
+      formData.append("description", productDescription.trim());
       formData.append("minBid", minBid);
       formData.append("durationHours", duration);
       formData.append("category", category);
-      formData.append("image", imageFile);
+      
+      // Add a placeholder image if none selected
+      if (imageFile) {
+        formData.append("image", imageFile);
+      } else {
+        // Create a placeholder blob
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#f0f0f0';
+          ctx.fillRect(0, 0, 400, 300);
+          ctx.fillStyle = '#999';
+          ctx.font = '20px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('No Image', 200, 150);
+        }
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            formData.append("image", blob, "placeholder.png");
+          }
+        });
+      }
 
       await createAuctionMutation.mutateAsync(formData);
     } catch (error) {
@@ -117,43 +183,47 @@ const CreateAuctionForm = () => {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="productName">Product Name</Label>
+            <Label htmlFor="productName">Product Name *</Label>
             <Input
               id="productName"
               placeholder="Enter product name"
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
               className="art-input"
+              required
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="productDescription">Product Description</Label>
+            <Label htmlFor="productDescription">Product Description *</Label>
             <Textarea
               id="productDescription"
               placeholder="Describe your product in detail"
               value={productDescription}
               onChange={(e) => setProductDescription(e.target.value)}
               className="art-input min-h-32"
+              required
             />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="minBid">Minimum Bid ($)</Label>
+              <Label htmlFor="minBid">Minimum Bid ($) *</Label>
               <Input
                 id="minBid"
                 type="number"
                 placeholder="0.00"
                 min="1"
+                step="0.01"
                 value={minBid}
                 onChange={(e) => setMinBid(e.target.value)}
                 className="art-input"
+                required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="duration">Auction Duration (hours)</Label>
+              <Label htmlFor="duration">Auction Duration (hours) *</Label>
               <Input
                 id="duration"
                 type="number"
@@ -163,6 +233,7 @@ const CreateAuctionForm = () => {
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 className="art-input"
+                required
               />
             </div>
           </div>
@@ -184,7 +255,7 @@ const CreateAuctionForm = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="productImage">Product Image</Label>
+            <Label htmlFor="productImage">Product Image (Optional)</Label>
             <div className="border-2 border-dashed border-gray-600 rounded-md p-6 flex flex-col items-center justify-center cursor-pointer hover:border-art-purple transition-colors"
               onClick={() => document.getElementById('productImage')?.click()}
             >

@@ -2,10 +2,8 @@
 import axios from "axios";
 import { Auction, AuctionRequest } from "@/types/auction";
 
-// For Lovable preview, we'll use mock data instead of connecting to localhost
 const IS_PRODUCTION = window.location.hostname !== "localhost";
 
-// Create axios instance with conditional base URL
 const api = axios.create({
   baseURL: IS_PRODUCTION ? undefined : "http://localhost:8080/api",
   headers: {
@@ -13,10 +11,81 @@ const api = axios.create({
   },
 });
 
-// Mock data for auctions
-let mockAuctions: Auction[] = [];
+// Mock data storage
+let mockAuctions: Auction[] = [
+  {
+    id: "auction-1",
+    name: "Vintage Art Painting",
+    description: "Beautiful vintage painting from the 19th century",
+    sellerId: "user-1",
+    sellerName: "John Artist",
+    minBid: 100,
+    currentBid: 150,
+    currentBidderId: "user-2",
+    currentBidderName: "Jane Collector",
+    imageUrl: "https://via.placeholder.com/500?text=Vintage+Art",
+    status: "ACTIVE",
+    category: "art",
+    endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "auction-2", 
+    name: "Antique Vase",
+    description: "Rare antique vase from Ming dynasty",
+    sellerId: "user-3",
+    sellerName: "Mike Antiques",
+    minBid: 500,
+    currentBid: 500,
+    imageUrl: "https://via.placeholder.com/500?text=Antique+Vase",
+    status: "ACTIVE", 
+    category: "antiques",
+    endTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
 
-// Add a request interceptor to include the JWT token in requests
+let mockUsers = [
+  {
+    id: "user-1",
+    name: "John Artist",
+    email: "john@example.com",
+    roles: ["ROLE_USER"],
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "user-2", 
+    name: "Jane Collector",
+    email: "jane@example.com",
+    roles: ["ROLE_USER"],
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "user-3",
+    name: "Mike Antiques", 
+    email: "mike@example.com",
+    roles: ["ROLE_USER"],
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "admin-1",
+    name: "ART Admin",
+    email: "art123bets@gmail.com", 
+    roles: ["ROLE_USER", "ROLE_ADMIN"],
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("artAuctionToken");
@@ -30,11 +99,9 @@ api.interceptors.request.use(
   }
 );
 
-// Intercept responses in production mode to mock backend behavior
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only use mocks in production mode
     if (IS_PRODUCTION && error.message === "Network Error") {
       console.log("Using mock data instead of real backend");
       return handleMockResponses(error.config);
@@ -43,7 +110,6 @@ api.interceptors.response.use(
   }
 );
 
-// Mock response handler based on request URL and method
 const handleMockResponses = (config) => {
   const { url, method, data } = config;
   
@@ -51,22 +117,29 @@ const handleMockResponses = (config) => {
   if (url === "/auth/signup" && method.toLowerCase() === "post") {
     const userData = JSON.parse(data);
     
-    // Check if required fields are provided
     if (!userData.name || !userData.email || !userData.password) {
       return Promise.reject({
         response: { data: "All fields are required" }
       });
     }
     
-    // Create mock user response
     const userId = `user-${Date.now()}`;
+    const newUser = {
+      id: userId,
+      name: userData.name,
+      email: userData.email,
+      roles: ["ROLE_USER"],
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    mockUsers.push(newUser);
+    
     const mockResponse = {
       data: {
-        id: userId,
-        name: userData.name,
-        email: userData.email,
-        token: `mock-token-${userId}`,
-        roles: ["ROLE_USER"]
+        ...newUser,
+        token: `mock-token-${userId}`
       }
     };
     
@@ -77,27 +150,47 @@ const handleMockResponses = (config) => {
   if (url === "/auth/login" && method.toLowerCase() === "post") {
     const loginData = JSON.parse(data);
     
-    // Check admin login
     if (loginData.email === "art123bets@gmail.com" && loginData.password === "ARTROCKS123") {
       return Promise.resolve({
         data: {
           id: "admin-1",
           name: "ART Admin",
           email: "art123bets@gmail.com",
-          token: "mock-token-for-admin",
+          token: "mock-token-admin-1",
           roles: ["ROLE_USER", "ROLE_ADMIN"]
         }
       });
     }
     
-    // For demo purposes, any valid email/password combination will work
     if (loginData.email && loginData.password && loginData.password.length >= 6) {
+      let userId = `user-${Date.now()}`;
+      let userName = loginData.email.split("@")[0];
+      
+      // Check if user already exists
+      const existingUser = mockUsers.find(u => u.email === loginData.email);
+      if (existingUser) {
+        userId = existingUser.id;
+        userName = existingUser.name;
+      } else {
+        // Add new user to mock users
+        const newUser = {
+          id: userId,
+          name: userName,
+          email: loginData.email,
+          roles: ["ROLE_USER"],
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        mockUsers.push(newUser);
+      }
+      
       return Promise.resolve({
         data: {
-          id: `user-${Date.now()}`,
-          name: loginData.email.split("@")[0],
+          id: userId,
+          name: userName,
           email: loginData.email,
-          token: `mock-token-${Date.now()}`,
+          token: `mock-token-${userId}`,
           roles: ["ROLE_USER"]
         }
       });
@@ -123,36 +216,32 @@ const handleMockResponses = (config) => {
   // Mock get seller auctions
   if (url === "/auctions/seller" && method.toLowerCase() === "get") {
     const token = config.headers["Authorization"];
-    const userId = token ? token.split("-").pop() : null;
+    const userId = token ? token.replace("Bearer mock-token-", "") : null;
+    console.log("Getting seller auctions for user:", userId);
     const sellerAuctions = mockAuctions.filter(auction => auction.sellerId === userId);
+    console.log("Found seller auctions:", sellerAuctions);
     return Promise.resolve({ data: sellerAuctions });
   }
 
   // Mock create auction
   if (url === "/auctions" && method.toLowerCase() === "post") {
     const token = config.headers["Authorization"];
-    const userId = token ? token.split("-").pop() : `user-${Date.now()}`;
-    const userName = `User ${userId.substring(0, 4)}`;
+    const userId = token ? token.replace("Bearer mock-token-", "") : `user-${Date.now()}`;
+    
+    // Find user for seller name
+    const user = mockUsers.find(u => u.id === userId);
+    const userName = user ? user.name : `User ${userId.substring(0, 4)}`;
 
-    // Handle FormData for file uploads
-    let auctionData: AuctionRequest;
+    let auctionData;
     if (data instanceof FormData) {
-      // Extract auction data from FormData
-      const formName = data.get('name') as string;
-      const formDescription = data.get('description') as string;
-      const formMinBid = parseFloat(data.get('minBid') as string);
-      const formDurationHours = parseInt(data.get('durationHours') as string);
-      const formCategory = data.get('category') as string;
-      
       auctionData = {
-        name: formName,
-        description: formDescription,
-        minBid: formMinBid,
-        durationHours: formDurationHours,
-        category: formCategory
+        name: data.get('name') as string,
+        description: data.get('description') as string,
+        minBid: parseFloat(data.get('minBid') as string),
+        durationHours: parseInt(data.get('durationHours') as string),
+        category: data.get('category') as string || "other"
       };
     } else {
-      // For JSON data
       auctionData = JSON.parse(data);
     }
 
@@ -169,14 +258,16 @@ const handleMockResponses = (config) => {
       minBid: auctionData.minBid,
       currentBid: auctionData.minBid,
       status: "ACTIVE",
-      category: auctionData.category || "other",
+      category: auctionData.category,
       endTime: endTime.toISOString(),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      imageUrl: "https://via.placeholder.com/500?text=Auction+Item" // Placeholder image
+      imageUrl: "https://via.placeholder.com/500?text=Auction+Item"
     };
 
     mockAuctions.push(newAuction);
+    console.log("Created new auction:", newAuction);
+    console.log("Total auctions now:", mockAuctions.length);
     return Promise.resolve({ data: newAuction });
   }
 
@@ -199,10 +290,10 @@ const handleMockResponses = (config) => {
     }
 
     const token = config.headers["Authorization"];
-    const userId = token ? token.split("-").pop() : `user-${Date.now()}`;
-    const userName = `User ${userId.substring(0, 4)}`;
+    const userId = token ? token.replace("Bearer mock-token-", "") : `user-${Date.now()}`;
+    const user = mockUsers.find(u => u.id === userId);
+    const userName = user ? user.name : `User ${userId.substring(0, 4)}`;
     
-    // Update auction with new bid
     auction.currentBid = amount;
     auction.currentBidderId = userId;
     auction.currentBidderName = userName;
@@ -219,8 +310,24 @@ const handleMockResponses = (config) => {
       }
     });
   }
+
+  // Mock get all users (for admin)
+  if (url === "/users" && method.toLowerCase() === "get") {
+    return Promise.resolve({ data: mockUsers });
+  }
+
+  // Mock get user profile
+  if (url === "/users/profile" && method.toLowerCase() === "get") {
+    const token = config.headers["Authorization"];
+    const userId = token ? token.replace("Bearer mock-token-", "") : null;
+    const user = mockUsers.find(u => u.id === userId);
+    
+    if (user) {
+      return Promise.resolve({ data: user });
+    }
+    return Promise.reject({ response: { data: "User not found" } });
+  }
   
-  // Default response for unmocked endpoints
   return Promise.reject({
     response: { data: "This API endpoint is not available in preview mode." }
   });

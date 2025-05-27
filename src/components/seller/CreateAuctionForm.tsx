@@ -17,26 +17,26 @@ const CreateAuctionForm = () => {
   const [productDescription, setProductDescription] = useState("");
   const [minBid, setMinBid] = useState("");
   const [duration, setDuration] = useState("24");
+  const [category, setCategory] = useState("art");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Create auction mutation
   const createAuctionMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       return await auctionsAPI.create(formData);
     },
     onSuccess: () => {
-      // Reset form
       setProductName("");
       setProductDescription("");
       setMinBid("");
       setDuration("24");
+      setCategory("art");
       setImageFile(null);
       setPreviewUrl(null);
 
-      // Invalidate and refetch auctions queries
       queryClient.invalidateQueries({ queryKey: ["seller-auctions"] });
       queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
+      queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
 
       toast({
         title: "Product listed",
@@ -91,20 +91,14 @@ const CreateAuctionForm = () => {
     setIsSubmitting(true);
 
     try {
-      // Create auction request object
-      const auctionRequest = {
-        name: productName,
-        description: productDescription,
-        minBid: parseFloat(minBid),
-        durationHours: parseInt(duration)
-      };
-
-      // Create form data for multipart request
       const formData = new FormData();
-      formData.append("auction", new Blob([JSON.stringify(auctionRequest)], { type: "application/json" }));
+      formData.append("name", productName);
+      formData.append("description", productDescription);
+      formData.append("minBid", minBid);
+      formData.append("durationHours", duration);
+      formData.append("category", category);
       formData.append("image", imageFile);
 
-      // Submit the auction
       await createAuctionMutation.mutateAsync(formData);
     } catch (error) {
       console.error("Error in form submission:", error);
@@ -171,6 +165,22 @@ const CreateAuctionForm = () => {
                 className="art-input"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 bg-art-dark border border-gray-600 rounded-md text-white"
+            >
+              <option value="art">Art</option>
+              <option value="collectibles">Collectibles</option>
+              <option value="antiques">Antiques</option>
+              <option value="jewelry">Jewelry</option>
+              <option value="other">Other</option>
+            </select>
           </div>
           
           <div className="space-y-2">

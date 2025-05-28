@@ -28,7 +28,7 @@ const StatsOverview: React.FC = () => {
   
   const highestBid = Array.isArray(auctions) 
     ? auctions.reduce((max, auction) => 
-        Math.max(max, auction?.currentBid || 0), 0) 
+        Math.max(max, auction?.current_bid || 0), 0) 
     : 0;
 
   return (

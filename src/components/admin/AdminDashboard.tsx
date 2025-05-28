@@ -35,7 +35,7 @@ const AdminDashboard: React.FC = () => {
   });
 
   const totalUsers = Array.isArray(users) ? users.length : 0;
-  const activeUsers = Array.isArray(users) ? users.filter(user => user.active).length : 0;
+  const activeUsers = totalUsers; // All users are active by default in our schema
   const totalAuctions = Array.isArray(auctions) ? auctions.length : 0;
   const activeAuctions = Array.isArray(auctions) ? auctions.filter(auction => auction.status === "ACTIVE").length : 0;
 

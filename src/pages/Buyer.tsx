@@ -51,7 +51,7 @@ const Buyer: React.FC = () => {
     const matchesSearch = 
       auction.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       auction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (auction.sellerName && auction.sellerName.toLowerCase().includes(searchTerm.toLowerCase()));
+      (auction.seller_name && auction.seller_name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesTab && matchesSearch;
   }) : [];

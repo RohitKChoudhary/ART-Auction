@@ -62,14 +62,14 @@ const AdminAuctionsTable: React.FC<AdminAuctionsTableProps> = ({ auctions }) => 
         {auctions.map((auction) => (
           <TableRow key={auction.id}>
             <TableCell className="font-medium">{auction.name}</TableCell>
-            <TableCell>{auction.sellerName}</TableCell>
-            <TableCell>${auction.currentBid.toLocaleString()}</TableCell>
+            <TableCell>{auction.seller_name}</TableCell>
+            <TableCell>${auction.current_bid.toLocaleString()}</TableCell>
             <TableCell>
               <Badge variant={getStatusVariant(auction.status)}>
                 {auction.status}
               </Badge>
             </TableCell>
-            <TableCell>{formatDate(auction.endTime)}</TableCell>
+            <TableCell>{formatDate(auction.end_time)}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end space-x-2">
                 <Button size="sm" variant="outline">

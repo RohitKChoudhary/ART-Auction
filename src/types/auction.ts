@@ -3,18 +3,18 @@ export interface Auction {
   id: string;
   name: string;
   description: string;
-  sellerId: string;
-  sellerName: string;
-  minBid: number;
-  currentBid: number;
-  currentBidderId?: string;
-  currentBidderName?: string;
-  imageUrl?: string;
+  seller_id: string;
+  seller_name: string;
+  min_bid: number;
+  current_bid: number;
+  current_bidder_id?: string;
+  current_bidder_name?: string;
+  image_url?: string;
   status: "ACTIVE" | "ENDED" | "CANCELLED";
   category?: string;
-  endTime: string;
-  createdAt: string;
-  updatedAt: string;
+  end_time: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuctionRequest {

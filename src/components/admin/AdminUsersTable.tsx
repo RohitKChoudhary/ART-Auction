@@ -10,23 +10,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Shield, UserX, UserCheck } from "lucide-react";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  roles: string[];
-  active: boolean;
-  createdAt: string;
-}
+import { Shield, UserCheck } from "lucide-react";
+import { User } from "@/types/user";
 
 interface AdminUsersTableProps {
   users: User[];
 }
 
 const AdminUsersTable: React.FC<AdminUsersTableProps> = ({ users }) => {
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Unknown";
     try {
       return new Date(dateString).toLocaleDateString();
     } catch (error) {
@@ -34,8 +27,8 @@ const AdminUsersTable: React.FC<AdminUsersTableProps> = ({ users }) => {
     }
   };
 
-  const isAdmin = (roles: string[]) => {
-    return Array.isArray(roles) && roles.includes("ROLE_ADMIN");
+  const isAdmin = (role: string) => {
+    return role === "admin";
   };
 
   if (!users || users.length === 0) {
@@ -64,8 +57,8 @@ const AdminUsersTable: React.FC<AdminUsersTableProps> = ({ users }) => {
             <TableCell className="font-medium">{user.name}</TableCell>
             <TableCell>{user.email}</TableCell>
             <TableCell>
-              <Badge variant={isAdmin(user.roles) ? "default" : "secondary"}>
-                {isAdmin(user.roles) ? (
+              <Badge variant={isAdmin(user.role) ? "default" : "secondary"}>
+                {isAdmin(user.role) ? (
                   <>
                     <Shield className="w-3 h-3 mr-1" />
                     Admin
@@ -76,27 +69,18 @@ const AdminUsersTable: React.FC<AdminUsersTableProps> = ({ users }) => {
               </Badge>
             </TableCell>
             <TableCell>
-              <Badge variant={user.active ? "default" : "destructive"}>
-                {user.active ? (
-                  <>
-                    <UserCheck className="w-3 h-3 mr-1" />
-                    Active
-                  </>
-                ) : (
-                  <>
-                    <UserX className="w-3 h-3 mr-1" />
-                    Inactive
-                  </>
-                )}
+              <Badge variant="default">
+                <UserCheck className="w-3 h-3 mr-1" />
+                Active
               </Badge>
             </TableCell>
-            <TableCell>{formatDate(user.createdAt)}</TableCell>
+            <TableCell>{formatDate(user.created_at)}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end space-x-2">
                 <Button size="sm" variant="outline">
-                  {user.active ? "Suspend" : "Activate"}
+                  View Profile
                 </Button>
-                {!isAdmin(user.roles) && (
+                {!isAdmin(user.role) && (
                   <Button size="sm" variant="outline">
                     Promote to Admin
                   </Button>

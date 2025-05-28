@@ -106,10 +106,10 @@ const AuctionsList = () => {
                 <TableRow key={auction.id}>
                   <TableCell className="font-medium">{auction.name}</TableCell>
                   <TableCell className="hidden md:table-cell">
-                    ${auction.currentBid}
+                    ${auction.current_bid}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    ${auction.minBid}
+                    ${auction.min_bid}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -123,7 +123,7 @@ const AuctionsList = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {formatDate(auction.endTime)}
+                    {formatDate(auction.end_time)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button 

@@ -20,7 +20,7 @@ const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
     <Card key={auction.id} className="art-card">
       <div className="aspect-square bg-art-charcoal rounded-md overflow-hidden mb-4">
         <img 
-          src={auction.imageUrl || "https://via.placeholder.com/500?text=No+Image"} 
+          src={auction.image_url || "https://via.placeholder.com/500?text=No+Image"} 
           alt={auction.name}
           className="w-full h-full object-cover"
           onError={(e) => {
@@ -31,11 +31,11 @@ const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
       <h3 className="text-lg font-medium mb-2">{auction.name}</h3>
       <div className="flex justify-between text-sm mb-3">
         <span className="text-gray-400">Current Bid</span>
-        <span className="font-medium text-art-purple">${auction.currentBid}</span>
+        <span className="font-medium text-art-purple">${auction.current_bid}</span>
       </div>
       <div className="flex justify-between text-sm">
         <span className="text-gray-400">Ends In</span>
-        <span className="font-medium">{calculateTimeLeft(auction.endTime)}</span>
+        <span className="font-medium">{calculateTimeLeft(auction.end_time)}</span>
       </div>
     </Card>
   );

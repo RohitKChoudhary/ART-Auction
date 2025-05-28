@@ -10,7 +10,7 @@ export interface Auction {
   current_bidder_id?: string;
   current_bidder_name?: string;
   image_url?: string;
-  status: "ACTIVE" | "ENDED" | "CANCELLED";
+  status: string; // Changed from specific union to string to match Supabase
   category?: string;
   end_time: string;
   created_at: string;

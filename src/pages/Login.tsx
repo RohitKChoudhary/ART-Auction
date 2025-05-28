@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -13,20 +13,51 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, isLoading } = useAuth();
+  const [loginError, setLoginError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || isSubmitting) return;
     
-    await login(email, password);
-    navigate("/dashboard");
+    setLoginError("");
+    setIsSubmitting(true);
+    
+    try {
+      await login(email, password);
+      // Navigation will be handled by the useEffect above
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setLoginError(
+        error.message || 
+        "Failed to login. Please check your credentials and try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-art-dark">
+        <Loader2 className="h-12 w-12 animate-spin text-art-purple" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-art-dark p-4">
@@ -41,6 +72,11 @@ const Login: React.FC = () => {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {loginError && (
+              <Alert variant="destructive">
+                <AlertDescription>{loginError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -51,6 +87,7 @@ const Login: React.FC = () => {
                 placeholder="Enter your email"
                 className="art-input"
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -68,6 +105,7 @@ const Login: React.FC = () => {
                 placeholder="Enter your password"
                 className="art-input"
                 required
+                disabled={isSubmitting}
               />
             </div>
           </CardContent>
@@ -75,9 +113,9 @@ const Login: React.FC = () => {
             <Button 
               type="submit"
               className="w-full bg-art-purple hover:bg-art-purple-dark text-white"
-              disabled={isLoading}
+              disabled={isSubmitting || !email || !password}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Logging in...

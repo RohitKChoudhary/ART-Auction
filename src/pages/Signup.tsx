@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/components/ui/use-toast";
 
 const Signup: React.FC = () => {
   const [name, setName] = useState("");
@@ -23,9 +22,16 @@ const Signup: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [signupError, setSignupError] = useState("");
-  const { register, isLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const validatePassword = () => {
     if (password !== confirmPassword) {
@@ -51,22 +57,29 @@ const Signup: React.FC = () => {
     
     if (!validatePassword()) return;
     
+    setIsSubmitting(true);
+    
     try {
       await register(name, email, password);
-      toast({
-        title: "Account created successfully!",
-        description: "Redirecting to dashboard...",
-      });
-      navigate("/dashboard");
+      // Navigation will be handled by the useEffect above if auto-login happens
     } catch (error: any) {
       console.error("Signup error:", error);
       setSignupError(
-        error.response?.data || 
         error.message || 
         "Failed to create account. Please try again later."
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-art-dark">
+        <Loader2 className="h-12 w-12 animate-spin text-art-purple" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-art-dark p-4">
@@ -95,6 +108,7 @@ const Signup: React.FC = () => {
                 placeholder="Enter your full name"
                 className="art-input"
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -107,6 +121,7 @@ const Signup: React.FC = () => {
                 placeholder="Enter your email"
                 className="art-input"
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -119,6 +134,7 @@ const Signup: React.FC = () => {
                 placeholder="Create a password"
                 className="art-input"
                 required
+                disabled={isSubmitting}
               />
               <p className="text-xs text-gray-400">Password must be at least 6 characters long</p>
             </div>
@@ -132,6 +148,7 @@ const Signup: React.FC = () => {
                 placeholder="Confirm your password"
                 className="art-input"
                 required
+                disabled={isSubmitting}
               />
               {passwordError && (
                 <p className="text-red-500 text-sm">{passwordError}</p>
@@ -142,9 +159,9 @@ const Signup: React.FC = () => {
             <Button 
               type="submit"
               className="w-full bg-art-purple hover:bg-art-purple-dark text-white"
-              disabled={isLoading}
+              disabled={isSubmitting || !name || !email || !password || !confirmPassword}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating Account...

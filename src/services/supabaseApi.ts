@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Auction, AuctionRequest } from "@/types/auction";
 
@@ -295,5 +296,3 @@ export const messagesAPI = {
     return { data: "Message created" };
   },
 };
-
-export default supabase;

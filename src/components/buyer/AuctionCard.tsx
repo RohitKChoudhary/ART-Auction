@@ -52,13 +52,19 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
       queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
+      toast({
+        title: "Bid placed!",
+        description: `Your bid of $${bidAmount} for "${auction.name}" has been placed.`,
+      });
+      // Clear the input
+      onBidChange(auction.id, "");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Bid error:", error);
       toast({
         variant: "destructive",
         title: "Bid Failed",
-        description: "There was an error placing your bid. Please try again."
+        description: error.message || "There was an error placing your bid. Please try again."
       });
     }
   });
@@ -73,32 +79,24 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
       return;
     }
     
-    if (bidAmount <= auction.currentBid) {
+    if (bidAmount <= auction.current_bid) {
       toast({
         variant: "destructive",
         title: "Bid too low",
-        description: `Your bid must be higher than the current bid of $${auction.currentBid}`,
+        description: `Your bid must be higher than the current bid of $${auction.current_bid}`,
       });
       return;
     }
     
     // Place bid
     bidMutation.mutate({ auctionId: auction.id, amount: bidAmount });
-    
-    toast({
-      title: "Bid placed!",
-      description: `Your bid of $${bidAmount} for "${auction.name}" has been placed.`,
-    });
-    
-    // Clear the input
-    onBidChange(auction.id, "");
   };
   
   return (
     <Card className="art-card flex flex-col">
       <div className="aspect-square bg-art-charcoal rounded-md overflow-hidden mb-4">
         <img 
-          src={auction.imageUrl || "https://via.placeholder.com/500?text=No+Image"} 
+          src={auction.image_url || "https://via.placeholder.com/500?text=No+Image"} 
           alt={auction.name}
           className="w-full h-full object-cover"
           onError={(e) => {
@@ -109,7 +107,7 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
       
       <CardHeader className="p-0 pb-3">
         <CardTitle className="text-xl">{auction.name}</CardTitle>
-        <p className="text-sm text-art-purple">Seller: {auction.sellerName || "Unknown"}</p>
+        <p className="text-sm text-art-purple">Seller: {auction.seller_name || "Unknown"}</p>
       </CardHeader>
       
       <CardContent className="p-0 flex-1">
@@ -119,14 +117,14 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
           <div>
             <p className="text-xs text-gray-400">Current Bid</p>
             <p className="text-lg font-semibold text-art-purple">
-              ${auction.currentBid?.toLocaleString() || auction.minBid?.toLocaleString()}
+              ${auction.current_bid?.toLocaleString() || auction.min_bid?.toLocaleString()}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-400">Ends In</p>
             <p className="text-lg font-semibold flex items-center">
               <Clock className="h-4 w-4 mr-1" />
-              {getTimeRemaining(auction.endTime)}
+              {getTimeRemaining(auction.end_time)}
             </p>
           </div>
         </div>
@@ -136,7 +134,7 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
         <div className="w-full flex space-x-2">
           <Input
             type="number"
-            placeholder={`Min: $${(auction.currentBid || auction.minBid) + 1}`}
+            placeholder={`Min: $${(auction.current_bid || auction.min_bid) + 1}`}
             value={bidAmount || ""}
             onChange={(e) => onBidChange(auction.id, e.target.value)}
             className="art-input"

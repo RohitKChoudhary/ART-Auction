@@ -1,13 +1,16 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { auctionsAPI } from "@/services/api";
 import { Link } from "react-router-dom";
 import AuctionCardSkeleton from "../auctions/AuctionCardSkeleton";
 import AuctionCard from "../auctions/AuctionCard";
+import { supabase } from "@/integrations/supabase/client";
 
 const RecentAuctions: React.FC = () => {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["recent-auctions"],
     queryFn: async () => {
@@ -21,6 +24,44 @@ const RecentAuctions: React.FC = () => {
       }
     }
   });
+
+  // Set up real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('auction-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'auctions'
+        },
+        () => {
+          console.log('Auction changed, refetching...');
+          queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
+          queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
+          queryClient.invalidateQueries({ queryKey: ["seller-auctions"] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bids'
+        },
+        () => {
+          console.log('Bid placed, refetching auctions...');
+          queryClient.invalidateQueries({ queryKey: ["recent-auctions"] });
+          queryClient.invalidateQueries({ queryKey: ["active-auctions"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Ensure auctions is always an array
   const auctions = Array.isArray(data) ? data : [];

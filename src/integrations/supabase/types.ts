@@ -9,7 +9,122 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      auctions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          current_bid: number
+          current_bidder_id: string | null
+          current_bidder_name: string | null
+          description: string
+          end_time: string
+          id: string
+          image_url: string | null
+          min_bid: number
+          name: string
+          seller_id: string
+          seller_name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          current_bid: number
+          current_bidder_id?: string | null
+          current_bidder_name?: string | null
+          description: string
+          end_time: string
+          id?: string
+          image_url?: string | null
+          min_bid: number
+          name: string
+          seller_id: string
+          seller_name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          current_bid?: number
+          current_bidder_id?: string | null
+          current_bidder_name?: string | null
+          description?: string
+          end_time?: string
+          id?: string
+          image_url?: string | null
+          min_bid?: number
+          name?: string
+          seller_id?: string
+          seller_name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      bids: {
+        Row: {
+          amount: number
+          auction_id: string
+          bidder_id: string
+          bidder_name: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          amount: number
+          auction_id: string
+          bidder_id: string
+          bidder_name: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          amount?: number
+          auction_id?: string
+          bidder_id?: string
+          bidder_name?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

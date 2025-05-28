@@ -23,15 +23,17 @@ const Signup: React.FC = () => {
   const [passwordError, setPasswordError] = useState("");
   const [signupError, setSignupError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, isAuthenticated, isLoading } = useAuth();
+  const { register, isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      navigate("/dashboard");
+    console.log('Signup page - Auth state:', { isAuthenticated, isLoading, userEmail: user?.email });
+    if (isAuthenticated && !isLoading && user) {
+      console.log('Redirecting to dashboard...');
+      navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, user, navigate]);
 
   const validatePassword = () => {
     if (password !== confirmPassword) {
@@ -48,6 +50,7 @@ const Signup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Signup form submitted');
     setSignupError("");
     
     if (!name || !email || !password || !confirmPassword) {
@@ -60,10 +63,12 @@ const Signup: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+      console.log('Calling register function...');
       await register(name, email, password);
+      console.log('Register function completed');
       // Navigation will be handled by the useEffect above if auto-login happens
     } catch (error: any) {
-      console.error("Signup error:", error);
+      console.error("Signup submission error:", error);
       setSignupError(
         error.message || 
         "Failed to create account. Please try again later."
@@ -109,6 +114,7 @@ const Signup: React.FC = () => {
                 className="art-input"
                 required
                 disabled={isSubmitting}
+                autoComplete="name"
               />
             </div>
             <div className="space-y-2">
@@ -122,6 +128,7 @@ const Signup: React.FC = () => {
                 className="art-input"
                 required
                 disabled={isSubmitting}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -135,6 +142,7 @@ const Signup: React.FC = () => {
                 className="art-input"
                 required
                 disabled={isSubmitting}
+                autoComplete="new-password"
               />
               <p className="text-xs text-gray-400">Password must be at least 6 characters long</p>
             </div>
@@ -149,6 +157,7 @@ const Signup: React.FC = () => {
                 className="art-input"
                 required
                 disabled={isSubmitting}
+                autoComplete="new-password"
               />
               {passwordError && (
                 <p className="text-red-500 text-sm">{passwordError}</p>

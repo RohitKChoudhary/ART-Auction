@@ -20,28 +20,37 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      navigate("/dashboard");
+    console.log('Login page - Auth state:', { isAuthenticated, isLoading, userEmail: user?.email });
+    if (isAuthenticated && !isLoading && user) {
+      console.log('Redirecting to dashboard...');
+      navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || isSubmitting) return;
+    console.log('Login form submitted');
+    
+    if (!email || !password || isSubmitting) {
+      console.log('Form validation failed');
+      return;
+    }
     
     setLoginError("");
     setIsSubmitting(true);
     
     try {
+      console.log('Calling login function...');
       await login(email, password);
-      // Navigation will be handled by the useEffect above
+      console.log('Login function completed successfully');
+      // Navigation will be handled by the useEffect above after auth state changes
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Login submission error:", error);
       setLoginError(
         error.message || 
         "Failed to login. Please check your credentials and try again."
@@ -88,6 +97,7 @@ const Login: React.FC = () => {
                 className="art-input"
                 required
                 disabled={isSubmitting}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -106,6 +116,7 @@ const Login: React.FC = () => {
                 className="art-input"
                 required
                 disabled={isSubmitting}
+                autoComplete="current-password"
               />
             </div>
           </CardContent>

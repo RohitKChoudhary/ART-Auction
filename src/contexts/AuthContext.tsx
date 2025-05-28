@@ -27,8 +27,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth state changed:', event, session?.user?.email);
       
       if (session?.user) {
-        // Get user profile from profiles table
         try {
+          // Get user profile from profiles table
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .from('profiles')
                 .insert({
                   id: session.user.id,
-                  name: session.user.user_metadata?.name || session.user.email || 'Unknown',
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Unknown',
                   email: session.user.email || '',
                   role: session.user.email === 'art123bets@gmail.com' ? 'admin' : 'user'
                 })
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (insertError) {
                 console.error('Error creating profile:', insertError);
                 setUser(null);
+                setIsLoading(false);
                 return;
               }
               
@@ -91,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getInitialSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session?.user?.email);
         // Auth state change listener will handle the session
       } catch (error) {
         console.error('Error getting initial session:', error);
@@ -105,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      setIsLoading(true);
+      console.log('Attempting login for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -113,14 +115,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('Login error:', error);
-        toast({
-          title: "Login Failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email Not Confirmed",
+            description: "Please check your email and click the confirmation link before logging in.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Invalid Credentials",
+            description: "The email or password you entered is incorrect.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Login Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
         throw error;
       }
 
+      console.log('Login successful for:', email);
       toast({
         title: "Login Successful",
         description: "Welcome back!",
@@ -128,14 +145,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Login error:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      setIsLoading(true);
+      console.log('Attempting registration for:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -148,20 +163,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('Registration error:', error);
-        toast({
-          title: "Registration Failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        if (error.message.includes('already registered')) {
+          toast({
+            title: "Account Already Exists",
+            description: "An account with this email already exists. Please try logging in instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registration Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
         throw error;
       }
 
       if (data.user && !data.session) {
+        // Email confirmation required
         toast({
           title: "Check Your Email",
-          description: "Please check your email to confirm your account.",
+          description: "Please check your email and click the confirmation link to complete your registration.",
         });
-      } else {
+      } else if (data.session) {
+        // Auto-login successful
+        console.log('Registration and auto-login successful for:', email);
         toast({
           title: "Registration Successful",
           description: "Welcome to ART Auction!",
@@ -170,8 +196,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
